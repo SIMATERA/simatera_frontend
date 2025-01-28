@@ -5,7 +5,6 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 const LoginPage = () => {
-
   useEffect(() => {
     document.title = 'Login - Asrama ITERA';
   }, []);
@@ -26,15 +25,16 @@ const LoginPage = () => {
     const user = dummyData.find((user) => user.email === email && user.password === password);
 
     if (user) {
+      localStorage.setItem("user", JSON.stringify(user)); // Simpan user ke localStorage
       if (!toast.isActive(toastId)) {
-        toast.success(`Login successful as ${user.role}`, { toastId });
+        toast.success(`Login berhasil sebagai ${user.role}`, { toastId });
       }
       setTimeout(() => {
-        window.location.href = `/${user.role}/pages`;
+        window.location.href = `/${user.role}`; // Redirect sesuai peran
       }, 1500);
     } else {
       if (!toast.isActive(toastId)) {
-        toast.error("Invalid credentials", { toastId });
+        toast.error("Email atau password salah", { toastId });
       }
     }
   };
@@ -51,7 +51,7 @@ const LoginPage = () => {
           <img src="images/iteralogo.png" alt="ITERA Logo" className="h-20 mb-6" />
         </div>
         <h2 className="text-2xl font-bold text-center mb-1">Selamat Datang di SIMATERA</h2>
-        <p className="text-center text-gray-600 mb-8">Sistem Informasi Asrama Mahasiswa Itera</p>
+        <p className="text-center text-gray-600 mb-8">Sistem Informasi Asrama Mahasiswa ITERA</p>
         <form onSubmit={handleLogin}>
           <div className="mb-4">
             <input
