@@ -1,13 +1,13 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import PageHeading from "../../components/PageHeading";
-import Sidebar from "../../components/sidebar";
+import { useState, useEffect } from 'react';
+import PageHeading from '../../components/PageHeading';
+import Sidebar from '../../components/sidebar';
 
 export default function KakakAsrama() {
-  const [activeMenu, setActiveMenu] = useState("Beranda");
+  const [activeMenu, setActiveMenu] = useState('Beranda');
 
-  const [mahasiswaName, setKakakAsramaName] = useState("");
+  const [mahasiswaName, setKakakAsramaName] = useState('');
 
   useEffect(() => {
     // Fetch the user data from an API or local storage
@@ -18,21 +18,29 @@ export default function KakakAsrama() {
 
     const getUserData = async () => {
       // Replace with actual data fetching logic
-      return { name: "Kakak Asrama" };
+      return { name: 'Kakak Asrama' };
     };
 
     fetchUserData();
   }, []);
-  const profileImage = "/images/mahasiswaprofile.png"; // Ganti dengan path gambar profil
+  const profileImage = '/images/mahasiswaprofile.png'; // Ganti dengan path gambar profil
 
   return (
     <div className="flex h-screen bg-[#F5F6FA]">
       {/* Sidebar dengan role kakak asrama */}
-      <Sidebar role="kasra" activeMenu={activeMenu} setActiveMenu={setActiveMenu} />
+      <Sidebar
+        role="kasra"
+        activeMenu={activeMenu}
+        setActiveMenu={setActiveMenu}
+      />
 
       <div className="flex-1 flex flex-col">
         {/* PageHeading bagian atas */}
-        <PageHeading title={activeMenu} name={mahasiswaName} profileImage={profileImage} />
+        <PageHeading
+          title={activeMenu}
+          name={mahasiswaName}
+          profileImage={profileImage}
+        />
 
         {/* Konten utama */}
         <div className="flex-1 p-6">
