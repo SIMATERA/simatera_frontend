@@ -10,7 +10,7 @@ const HomePage = () => {
 
   useEffect(() => {
     // Redirect ke halaman login saat aplikasi pertama kali dijalankan
-    router.push('/auth');
+    router.push('/admin');
   }, [router]);
 
   return <div>Redirecting...</div>;
