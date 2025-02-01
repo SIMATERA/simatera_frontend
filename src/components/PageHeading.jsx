@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import Image from "next/image";
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 
 export default function PageHeading({ title }) {
   const router = useRouter();
@@ -10,7 +10,7 @@ export default function PageHeading({ title }) {
 
   // Ambil user dari localStorage saat pertama kali component dipasang
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
+    const storedUser = localStorage.getItem('user');
     if (storedUser) {
       setDataUser(JSON.parse(storedUser)); // Parse data user
     }
@@ -23,8 +23,8 @@ export default function PageHeading({ title }) {
   };
 
   const confirmLogout = () => {
-    localStorage.removeItem("user");
-    router.push("/auth"); // Redirect ke halaman login setelah logout
+    localStorage.removeItem('user');
+    router.push('/auth'); // Redirect ke halaman login setelah logout
     setIsLogoutPromptVisible(false);
   };
 
@@ -37,7 +37,10 @@ export default function PageHeading({ title }) {
       <div className="flex gap-5 items-center relative">
         {dataUser ? (
           <>
-            <p>{dataUser.email} ({dataUser.role})</p> {/* Menampilkan email dan role */}
+            <p>
+              {dataUser.email} ({dataUser.role})
+            </p>{' '}
+            {/* Menampilkan email dan role */}
             <Image
               src="/images/adminprofile.png"
               alt="Logo Profile"
@@ -46,7 +49,6 @@ export default function PageHeading({ title }) {
               className="cursor-pointer"
               onClick={toggleMenu}
             />
-
             {isMenuVisible && (
               <div className="absolute right-0 mt-20 p-2 bg-white shadow-lg rounded-md w-32">
                 <button
