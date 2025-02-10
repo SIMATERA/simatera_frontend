@@ -3,27 +3,36 @@
 import { useState, useEffect } from 'react';
 import PageHeading from '../../components/PageHeading';
 import Sidebar from '../../components/sidebar';
+import DataPelanggaranMahasiswa from './datapelanggaran/page';
+import { getDataPengumuman } from '@/utils/localStorage';
+import CreatePengaduan from '@/app/mahasiswa/pengaduan/page';
+import { useRouter } from 'next/router';
+import { useAuth } from '@/utils/AuthContext';
 
 export default function Mahasiswa() {
+  const { user } = useAuth();
   const [activeMenu, setActiveMenu] = useState('Beranda');
 
   const [mahasiswaName, setMahasiswaName] = useState('');
 
+  const [pengumuman, setPengumuman] = useState([]);
+
   useEffect(() => {
-    // Fetch the user data from an API or local storage
-    const fetchUserData = async () => {
-      const userData = await getUserData(); // Replace with actual data fetching logic
-      setMahasiswaName(userData.name);
-    };
-
-    const getUserData = async () => {
-      // Replace with actual data fetching logic
-      return { name: 'John Doe' };
-    };
-
-    fetchUserData();
-  }, []);
+    // Pengumuman global
+    setPengumuman(getDataPengumuman());
+    // Data pribadi (jika user ada)
+    if (user && user.nim) {
+      // setPelanggaranCount(getDataPelanggaranMahasiswa(user.nim).length);
+      // setPengaduanCount(getDataPengaduanMahasiswa(user.nim).length);
+    }
+  }, [user]);
   const profileImage = '/images/mahasiswaprofile.png'; // Ganti dengan path gambar profil
+  useEffect(() => {
+    const data = getDataPengumuman();
+    if (data) {
+      setPengumuman(data);
+    }
+  }, []);
 
   return (
     <div className="flex h-screen bg-[#F5F6FA]">
@@ -44,8 +53,29 @@ export default function Mahasiswa() {
 
         {/* Konten utama */}
         <div className="flex-1 p-6">
-          <h1 className="text-3xl font-semibold capitalize">{activeMenu}</h1>
-          <p>Konten untuk {activeMenu}</p>
+          {activeMenu === 'Beranda' && (
+            <div className="p-6">
+              <h1 className="text-2xl font-bold mb-6">Daftar Pengumuman</h1>
+              <div className="space-y-4">
+                {pengumuman.length > 0 ? (
+                  pengumuman.map((item) => (
+                    <div
+                      key={item.id}
+                      className="bg-white p-4 rounded-lg shadow-md"
+                    >
+                      <h2 className="text-xl font-semibold">{item.judul}</h2>
+                      <p className="text-sm text-blue-500">{item.tanggal}</p>
+                      <p className="text-gray-700">{item.deskripsi}</p>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-gray-500">Tidak ada pengumuman.</p>
+                )}
+              </div>
+            </div>
+          )}
+          {activeMenu === 'Data Pelanggaran' && <DataPelanggaranMahasiswa />}
+          {activeMenu === 'Pengaduan' && <CreatePengaduan />}
         </div>
       </div>
     </div>
