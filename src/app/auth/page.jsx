@@ -1,47 +1,58 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { useAuth } from '@/utils/AuthContext';
+import { getDataMahasiswa } from '@/utils/localStorage';
 
 const LoginPage = () => {
-  useEffect(() => {
-    document.title = 'Login - Asrama ITERA';
-  }, []);
-
+  const router = useRouter();
+  const { user, login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  const dummyData = [
+  // 🔹 Ambil data mahasiswa dari localStorage
+  useEffect(() => {
+    const data = getDataMahasiswa();
+  }, []);
+
+  // 🔹 Data default (admin & kakak asrama)
+  const defaultData = [
     { email: 'admin@itera.ac.id', password: 'admin123', role: 'admin' },
     { email: 'kasra@itera.ac.id', password: 'kasra123', role: 'kakak-asrama' },
-    {
-      email: 'mahasiswa@itera.ac.id',
-      password: 'mahasiswa123',
-      role: 'mahasiswa',
-    },
+    ...getDataMahasiswa(),
   ];
+
+  // 🔹 Gabungkan data dari localStorage dengan data default
+  const allUsers = [...defaultData, ...getDataMahasiswa()];
+
+  // 🔹 Cek apakah user sudah login
+  useEffect(() => {
+    if (user) {
+      router.push(`/${user.role}`);
+    }
+  }, [user, router]);
 
   const handleLogin = (e) => {
     e.preventDefault();
     const toastId = 'login-toast';
 
-    const user = dummyData.find(
+    // 🔹 Cek apakah email & password cocok dengan yang tersimpan
+    const foundUser = allUsers.find(
       (user) => user.email === email && user.password === password
     );
 
-    if (user) {
-      localStorage.setItem('user', JSON.stringify(user)); // Simpan user ke localStorage
-      if (!toast.isActive(toastId)) {
-        toast.success(`Login berhasil sebagai ${user.role}`, { toastId });
-      }
+    if (foundUser) {
+      login(foundUser);
+      toast.success(`Login berhasil sebagai ${foundUser.role}`, { toastId });
+
       setTimeout(() => {
-        window.location.href = `/${user.role}`; // Redirect sesuai peran
+        router.push(`/${foundUser.role}`);
       }, 1500);
     } else {
-      if (!toast.isActive(toastId)) {
-        toast.error('Email atau password salah', { toastId });
-      }
+      toast.error('Email atau password salah', { toastId });
     }
   };
 
@@ -52,7 +63,7 @@ const LoginPage = () => {
         alt="Background"
         className="absolute inset-0 w-full h-full object-cover opacity-40"
       />
-      <div className="relative z-10 bg-white p-8 shadow-lg rounded-lg w-full max-w-md md:max-w-sm lg:max-w-md">
+      <div className="relative z-10 bg-white p-8 shadow-lg rounded-lg w-full max-w-md">
         <div className="flex justify-center">
           <img
             src="images/iteralogo.png"
