@@ -1,4 +1,5 @@
 'use client';
+import Link from 'next/link';
 import React from 'react';
 import {
   MENU_ITEMS_ADMIN,
@@ -21,8 +22,8 @@ const Sidebar = ({ role, activeMenu, setActiveMenu }) => {
   };
 
   return (
-    <div className="w-64 bg-gray-800 text-white p-5 flex flex-col space-y-4 h-full">
-      <div className="flex flex-col items-center mb-6">
+    <div className=" bg-gray-800 text-white flex flex-col p-5 bg-gradient-sidebar min-h-screen w-64">
+      <div className="flex flex-col items-center justify-center">
         <img
           src="/images/logoasrama.png"
           alt="Logo Asrama ITERA"
@@ -32,11 +33,11 @@ const Sidebar = ({ role, activeMenu, setActiveMenu }) => {
           Dashboard <br /> SIMATERA
         </h2>
       </div>
-      <ul className="space-y-2">
+      <ul className="py-10">
         {getMenuItems().map((item) => (
           <li key={item.key}>
-            <button
-              onClick={() => setActiveMenu(item.key)}
+            <Link
+              href={`/admin/${item.key}`}
               className={`w-full flex items-center gap-2 text-left p-3 rounded-md ${
                 activeMenu === item.key
                   ? 'bg-orange-700'
@@ -44,7 +45,7 @@ const Sidebar = ({ role, activeMenu, setActiveMenu }) => {
               }`}
             >
               {item.icon} {item.name}
-            </button>
+            </Link>
           </li>
         ))}
       </ul>
