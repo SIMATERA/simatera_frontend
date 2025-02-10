@@ -1,6 +1,10 @@
 import { useState, useEffect } from 'react';
 import { FiEdit } from 'react-icons/fi';
-import { ExclamationTriangleIcon, TrashIcon, PlusIcon } from '@heroicons/react/24/outline';
+import {
+  ExclamationTriangleIcon,
+  TrashIcon,
+  PlusIcon,
+} from '@heroicons/react/24/outline';
 import Swal from 'sweetalert2';
 import dayjs from 'dayjs';
 import { toast } from 'react-toastify';
@@ -378,7 +382,7 @@ const DataKasra = () => {
               onClick={() => setShowForm(true)}
             >
               <PlusIcon className="h-6 w-6 text-green-500 mr-2" />
-              <span className='font-bold'>Tambah Kasra</span>
+              <span className="font-bold">Tambah Kasra</span>
             </button>
           </div>
 
@@ -403,7 +407,12 @@ const DataKasra = () => {
                     <td>{kasra.noKamar}</td>
                     <td>{kasra.email}</td>
                     <td>{kasra.tempatLahir}</td>
-                    <td>{dayjs(kasra.tanggalLahir, ['DD/MM/YYYY', 'YYYY-MM-DD']).format('DD/MM/YYYY')}</td>
+                    <td>
+                      {dayjs(kasra.tanggalLahir, [
+                        'DD/MM/YYYY',
+                        'YYYY-MM-DD',
+                      ]).format('DD/MM/YYYY')}
+                    </td>
                     <td>{kasra.asal}</td>
                     <td>{kasra.beasiswa}</td>
                     <td>{kasra.golonganUKT}</td>
