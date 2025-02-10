@@ -1,6 +1,11 @@
 import { useState, useEffect } from 'react';
 import { FiEdit } from 'react-icons/fi';
-import { ExclamationTriangleIcon, TrashIcon, PlusIcon, ArrowUpTrayIcon } from '@heroicons/react/24/outline';
+import {
+  ExclamationTriangleIcon,
+  TrashIcon,
+  PlusIcon,
+  ArrowUpTrayIcon,
+} from '@heroicons/react/24/outline';
 import Swal from 'sweetalert2';
 import { toast } from 'react-toastify';
 import { ToastContainer } from 'react-toastify';
@@ -10,25 +15,35 @@ import {
   getDataMahasiswa,
   saveDataMahasiswa,
   clearDataMahasiswa,
-  getDataPelanggaran,
-  saveDataPelanggaran,
+  getDataPelanggaranMahasiswa,
+  saveDataPelanggaranMahasiswa,
+  saveDataPelanggaranAdmin,
 } from '@/utils/localStorage';
 import dayjs from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
+import PageHeading from '@/components/PageHeading';
 
 dayjs.extend(customParseFormat);
 const formatTanggal = (tanggal) => {
-  if (!tanggal) return "Invalid Date";
+  if (!tanggal) return 'Invalid Date';
 
   // Jika berupa angka (serial Excel)
-  if (typeof tanggal === "number") {
-    return dayjs(new Date((tanggal - 25569) * 86400 * 1000)).format("DD/MM/YYYY");
+  if (typeof tanggal === 'number') {
+    return dayjs(new Date((tanggal - 25569) * 86400 * 1000)).format(
+      'DD/MM/YYYY'
+    );
   }
 
   // Jika berupa string dengan berbagai format tanggal
-  const parsedDate = dayjs(tanggal, ["DD/MM/YYYY", "D/M/YYYY", "YYYY-MM-DD"], true);
-  
-  return parsedDate.isValid() ? parsedDate.format("DD/MM/YYYY") : "Invalid Date";
+  const parsedDate = dayjs(
+    tanggal,
+    ['DD/MM/YYYY', 'D/M/YYYY', 'YYYY-MM-DD'],
+    true
+  );
+
+  return parsedDate.isValid()
+    ? parsedDate.format('DD/MM/YYYY')
+    : 'Invalid Date';
 };
 
 const TABLE_HEAD = [
@@ -41,7 +56,7 @@ const TABLE_HEAD = [
   'Tempat Lahir',
   'Tanggal Lahir',
   'Asal',
-  'Beasiswa',
+  'Status',
   'Golongan UKT',
   'Action',
 ];
@@ -50,7 +65,7 @@ const TABLE_HEAD = [
 const dummyData = [
   {
     id: 1,
-    nim: '21012345',
+    nim: '120140001',
     nama: 'John Doe',
     prodi: 'Teknik Informatika',
     gedung: 'TB1',
@@ -60,7 +75,9 @@ const dummyData = [
     tanggalLahir: '01/01/2001',
     asal: 'Jakarta',
     golonganUKT: 3,
-    beasiswa: 'Bidikmisi',
+    status: 'Aktif Tinggal',
+    password: 'mahasiswa123',
+    role: 'mahasiswa',
   },
 ];
 
@@ -76,13 +93,12 @@ const DataMahasiswa = () => {
   });
   const [dataEditMahasiswa, setDataEditMahasiswa] = useState({});
   const [dataPelanggaran, setDataPelanggaran] = useState(() => {
-    const savedData = getDataPelanggaran();
+    const savedData = getDataPelanggaranMahasiswa();
     return savedData.length > 0 ? savedData : [];
   });
   const [file, setFile] = useState(null);
   const [fileName, setFileName] = useState('Pilih file...');
 
-  
   const initialFormState = {
     nim: '',
     nama: '',
@@ -94,15 +110,15 @@ const DataMahasiswa = () => {
     tanggalLahir: '',
     asal: '',
     golonganUKT: 1,
-    beasiswa: '',
-
+    status: '',
+    password: '',
   };
   const [formData, setFormData] = useState(initialFormState);
   const [pelanggaran, setPelanggaran] = useState('');
 
   const [showPelanggaranForm, setShowPelanggaranForm] = useState(false);
   const [selectedMahasiswa, setSelectedMahasiswa] = useState(null);
-  
+
   const handleTambahPelanggaran = (mahasiswa) => {
     setSelectedMahasiswa(mahasiswa);
     setFormData({
@@ -115,23 +131,28 @@ const DataMahasiswa = () => {
     });
     setShowPelanggaranForm(true);
   };
-  
 
   const handleSubmitPelanggaran = (e) => {
     e.preventDefault();
-  
+
     // Ambil data pelanggaran lama dari localStorage
-    const existingPelanggaran = getDataPelanggaran();
-  
+    const existingPelanggaran = getDataPelanggaranMahasiswa(
+      selectedMahasiswa.nim
+    );
+
     // Tambahkan data baru tanpa menghapus yang lama
-    const updatedPelanggaran = [...existingPelanggaran, { ...formData, id: existingPelanggaran.length + 1 }];
-  
+    const updatedPelanggaran = [
+      ...existingPelanggaran,
+      { ...formData, id: existingPelanggaran.length + 1 },
+    ];
+
     // Simpan kembali ke localStorage
-    saveDataPelanggaran(updatedPelanggaran);
-  
+    saveDataPelanggaranMahasiswa(selectedMahasiswa.nim, updatedPelanggaran);
+    saveDataPelanggaranAdmin(updatedPelanggaran);
+
     // Update state
     setPelanggaran(updatedPelanggaran);
-  
+
     setShowPelanggaranForm(false);
     setFormData({
       nim: '',
@@ -144,7 +165,6 @@ const DataMahasiswa = () => {
 
     toast.success('Data pelanggaran berhasil ditambahkan');
   };
-  
 
   useEffect(() => {
     saveDataMahasiswa(dataMahasiswa);
@@ -152,10 +172,10 @@ const DataMahasiswa = () => {
 
   useEffect(() => {
     if (pelanggaran && pelanggaran.length > 0) {
-      saveDataPelanggaran(pelanggaran);
+      saveDataPelanggaranMahasiswa(pelanggaran);
+      saveDataPelanggaranAdmin(pelanggaran);
     }
   }, [pelanggaran]);
-  
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -176,10 +196,14 @@ const DataMahasiswa = () => {
       id: Date.now(),
       tanggalLahir:
         formData.tanggalLahir || new Date().toISOString().split('T')[0],
+      password: formData.password || 'mahasiswa123',
+      role: 'mahasiswa',
     };
 
-    // Update state dan otomatis tersimpan ke localStorage via useEffect
-    setDataMahasiswa((prev) => [...prev, newMahasiswa]);
+    const updatedData = [...dataMahasiswa, newMahasiswa];
+    setDataMahasiswa(updatedData);
+    // Simpan data ke localStorage
+    saveDataMahasiswa(updatedData);
     toast.update(idd, {
       render: 'Data berhasil ditambahkan',
       type: 'success',
@@ -225,7 +249,6 @@ const DataMahasiswa = () => {
     setShowModal(false);
   };
 
-
   const handleDelete = (id) => {
     Swal.fire({
       title: 'Apakah Anda yakin?',
@@ -257,35 +280,40 @@ const DataMahasiswa = () => {
       alert('Pilih file terlebih dahulu!');
       return;
     }
-  
+
     const fileExtension = file.name.split('.').pop().toLowerCase();
     if (fileExtension === 'csv' || fileExtension === 'xlsx') {
       const reader = new FileReader();
-  
+
       reader.onload = (event) => {
         const binaryString = event.target.result;
         const workbook = XLSX.read(binaryString, { type: 'binary' });
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
         let data = XLSX.utils.sheet_to_json(sheet);
-  
+
         const formatDate = (excelDate) => {
           if (typeof excelDate === 'number') {
             // Jika tanggal berupa angka serial Excel, konversi ke Date
-            return dayjs(new Date((excelDate - 25569) * 86400 * 1000)).format('DD/MM/YYYY');
+            return dayjs(new Date((excelDate - 25569) * 86400 * 1000)).format(
+              'DD/MM/YYYY'
+            );
           } else if (typeof excelDate === 'string') {
             // Deteksi format dan konversi dengan benar
-            const parsedDate = dayjs(excelDate, ['DD/MM/YYYY', 'D/M/YYYY', 'YYYY-MM-DD'], true);
+            const parsedDate = dayjs(
+              excelDate,
+              ['DD/MM/YYYY', 'D/M/YYYY', 'YYYY-MM-DD'],
+              true
+            );
             if (parsedDate.isValid()) {
               return parsedDate.format('DD/MM/YYYY');
             } else {
-              console.warn("Format tanggal tidak dikenali:", excelDate);
+              console.warn('Format tanggal tidak dikenali:', excelDate);
               return 'Invalid Date';
             }
           }
           return 'Invalid Date';
         };
-        
-  
+
         // Proses data
         data = data.map((item) => ({
           id: Date.now() + Math.random(), // ID unik
@@ -293,28 +321,27 @@ const DataMahasiswa = () => {
           nama: item.Nama,
           prodi: item.Prodi,
           gedung: item.Gedung,
-          noKamar: item["No Kamar"],
+          noKamar: item['No Kamar'],
           email: item.Email,
-          tempatLahir: item["Tempat Lahir"],
-          tanggalLahir: formatDate(item["Tanggal Lahir"]), // Pertahankan format DD/MM/YYYY
+          tempatLahir: item['Tempat Lahir'],
+          tanggalLahir: formatDate(item['Tanggal Lahir']), // Pertahankan format DD/MM/YYYY
           asal: item.Asal,
-          beasiswa: item.Beasiswa,
-          golonganUKT: item["Golongan UKT"],
+          status: item.Status,
+          golonganUKT: item['Golongan UKT'],
+          password: item.NIM || 'mahasiswa123',
         }));
 
-        console.log("Data setelah format:", data);
-  
+        console.log('Data setelah format:', data);
+
         // Gabungkan data baru dengan data yang sudah ada
         setDataMahasiswa((prevState) => [...prevState, ...data]);
       };
-  
+
       reader.readAsBinaryString(file);
     } else {
       alert('Hanya file CSV atau XLSX yang diperbolehkan.');
     }
   };
-
-
 
   return (
     <>
@@ -452,7 +479,7 @@ const DataMahasiswa = () => {
                   value={formData.tanggalLahir}
                   onChange={handleInputChange}
                   className="input input-bordered w-full"
-                  max={new Date().toISOString().split("T")[0]}
+                  max={new Date().toISOString().split('T')[0]}
                   required
                 />
               </div>
@@ -496,12 +523,33 @@ const DataMahasiswa = () => {
               {/* Beasiswa */}
               <div className="form-group">
                 <label className="block uppercase text-gray-700 text-xs font-bold mb-2">
-                  Beasiswa
+                  Status Tinggal
+                </label>
+                <select
+                  name="status"
+                  value={formData.status}
+                  onChange={handleInputChange}
+                  className="select select-bordered w-full"
+                >
+                  {['Aktif Tinggal', 'Checkout'].map(
+                    (statusTinggal) => (
+                      <option key={statusTinggal} value={statusTinggal}>
+                        {statusTinggal}
+                      </option>
+                    )
+                  )}
+                </select>
+              </div>
+
+              {/* Password */}
+              <div className="form-group">
+                <label className="block uppercase text-gray-700 text-xs font-bold mb-2">
+                  Password
                 </label>
                 <input
-                  type="text"
-                  name="beasiswa"
-                  value={formData.beasiswa}
+                  type="password"
+                  name="password"
+                  value={formData.password}
                   onChange={handleInputChange}
                   className="input input-bordered w-full"
                   required
@@ -528,79 +576,113 @@ const DataMahasiswa = () => {
           </div>
         </div>
       ) : (
-        <div className="bg-white m-5 rounded-lg">
-          <div className="flex justify-between p-5">
-            <h1 className="text-3xl font-bold">Data Mahasiswa</h1>
-            <button
-              className="btn bg-[#FDE9CC] hover:bg-[#E0924A] text-gray-500 hover:text-white flex items-center"
-              onClick={() => setShowForm(true)}
-            >
-              <PlusIcon className="h-6 w-6 text-green-500 mr-2" />
-              <span className='font-bold'>Tambah Mahasiswa</span>
-            </button>
+        <div className="p-4 md:p-6">
+          {/* Header Section */}
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+            {/* Judul */}
+            <h1 className="text-2xl md:text-3xl font-bold">Data Mahasiswa</h1>
 
-            {/* Upload File */}
-            <input
-              type="file"
-              accept=".csv, .xlsx"
-              onChange={handleFileChange}
-              className="border p-2 rounded"
-            />
-            {fileName && <p>File yang dipilih: {fileName}</p>}
-            <button
-              onClick={handleUpload}
-              className="bg-blue-500 text-white px-4 py-2 rounded"
-            >
-              <ArrowUpTrayIcon className="h-6 w-6 mr-2" />
-            </button>
+            {/* Action Buttons */}
+            <div className="w-full md:w-auto flex flex-col-reverse md:flex-row gap-3">
+              {/* Upload Section */}
+              <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
+                <input
+                  type="file"
+                  accept=".csv, .xlsx"
+                  onChange={handleFileChange}
+                  className="border p-2 rounded w-full md:w-48 lg:w-64 text-sm"
+                />
+                <button
+                  onClick={handleUpload}
+                  className="bg-blue-500 text-white px-4 py-2 rounded flex items-center justify-center gap-2"
+                >
+                  <ArrowUpTrayIcon className="h-5 w-5" />
+                  <span className="text-sm md:text-base">Upload</span>
+                </button>
+              </div>
+
+              {/* Tambah Buttons */}
+              <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
+                <button
+                  className="btn bg-[#FDE9CC] hover:bg-[#E0924A] text-gray-500 hover:text-white flex items-center justify-center gap-2 p-2 md:p-3 rounded text-sm md:text-base"
+                  onClick={() => setShowForm(true)}
+                >
+                  <PlusIcon className="h-5 w-5 text-green-500" />
+                  <span>Tambah Mahasiswa</span>
+                </button>
+
+                <button
+                  className="btn bg-[#C2E0FF] hover:bg-[#80B3FF] text-gray-700 hover:text-white flex items-center justify-center gap-2 p-2 md:p-3 rounded text-sm md:text-base"
+                  onClick={() => setShowAccountForm(true)}
+                >
+                  <PlusIcon className="h-5 w-5 text-blue-500" />
+                  <span>Tambah Akun</span>
+                </button>
+              </div>
+            </div>
           </div>
 
-          <div className="overflow-x-auto p-5">
-            <table className="table w-full">
-              <thead>
+          {/* Table Section */}
+          <div className="overflow-x-auto rounded-lg border">
+            <table className="min-w-full">
+              <thead className="bg-gray-50">
                 <tr>
                   {TABLE_HEAD.map((head) => (
-                    <th key={head} className="bg-gray-100">
+                    <th
+                      key={head}
+                      className="px-4 py-3 text-left text-xs md:text-sm font-medium text-gray-500 uppercase whitespace-nowrap"
+                    >
                       {head}
                     </th>
                   ))}
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-gray-200">
                 {dataMahasiswa.map((mahasiswa) => (
-                  <tr key={mahasiswa.id} className="odd:bg-[#FDE9CC] even:bg-white">
-                    <td>{mahasiswa.nim}</td>
-                    <td>{mahasiswa.nama}</td>
-                    <td>{mahasiswa.prodi}</td>
-                    <td>{mahasiswa.gedung}</td>
-                    <td>{mahasiswa.noKamar}</td>
-                    <td>{mahasiswa.email}</td>
-                    <td>{formatTanggal(mahasiswa.tanggalLahir)}</td>
-                    <td>{mahasiswa.tempatLahir}</td>
-                    <td>{mahasiswa.asal}</td>
-                    <td>{mahasiswa.beasiswa}</td>
-                    <td>{mahasiswa.golonganUKT}</td>
-                    <td className='text-center'>
-                      <div className="flex gap-2">
+                  <tr
+                    key={mahasiswa.id}
+                    className="odd:bg-[#FDE9CC] even:bg-white"
+                  >
+                    {/* Table Cells */}
+                    <td className="px-4 py-2 text-sm">{mahasiswa.nim}</td>
+                    <td className="px-4 py-2 text-sm">{mahasiswa.nama}</td>
+                    <td className="px-4 py-2 text-sm">{mahasiswa.prodi}</td>
+                    <td className="px-4 py-2 text-sm">{mahasiswa.gedung}</td>
+                    <td className="px-4 py-2 text-sm">{mahasiswa.noKamar}</td>
+                    <td className="px-4 py-2 text-sm">{mahasiswa.email}</td>
+                    <td className="px-4 py-2 text-sm">
+                      {formatTanggal(mahasiswa.tanggalLahir)}
+                    </td>
+                    <td className="px-4 py-2 text-sm">
+                      {mahasiswa.tempatLahir}
+                    </td>
+                    <td className="px-4 py-2 text-sm">{mahasiswa.asal}</td>
+                    <td className="px-4 py-2 text-sm">{mahasiswa.status}</td>
+                    <td className="px-4 py-2 text-sm">
+                      {mahasiswa.golonganUKT}
+                    </td>
+
+                    {/* Action Buttons */}
+                    <td className="px-4 py-2 text-sm">
+                      <div className="flex justify-center gap-2">
                         <button
                           onClick={() => handleEdit(mahasiswa.id)}
-                          className="text-blue-500 hover:text-blue-700"
+                          className="p-1 hover:text-blue-600"
                         >
-                          <FiEdit size={20} />
+                          <FiEdit className="h-5 w-5" />
                         </button>
                         <button
                           onClick={() => handleTambahPelanggaran(mahasiswa)}
-                          className="text-red-500 hover:text-red-700"
+                          className="p-1 hover:text-yellow-600"
                         >
-                          <ExclamationTriangleIcon className="h-6 w-6 text-yellow-500" />
+                          <ExclamationTriangleIcon className="h-5 w-5" />
                         </button>
                         <button
                           onClick={() => handleDelete(mahasiswa.id)}
-                          className="text-red-500 hover:text-red-700"
+                          className="p-1 hover:text-red-600"
                         >
-                          <TrashIcon className="h-6 w-6 text-red-500" />
+                          <TrashIcon className="h-5 w-5" />
                         </button>
-                        
                       </div>
                     </td>
                   </tr>
@@ -773,7 +855,7 @@ const DataMahasiswa = () => {
                               tanggalLahir: e.target.value,
                             })
                           }
-                          max={new Date().toISOString().split("T")[0]}
+                          max={new Date().toISOString().split('T')[0]}
                         />
                       </div>
                     </div>
@@ -820,18 +902,26 @@ const DataMahasiswa = () => {
 
                       <div className="w-full px-3">
                         <label className="block uppercase tracking-wide text-gray-700 text-xs font-bold mb-2">
-                          Beasiswa
+                          Status Tinggal
                         </label>
-                        <input
+                        <select
                           className="appearance-none block w-full bg-gray-200 text-gray-700 border rounded py-3 px-4 mb-3 leading-tight focus:outline-none focus:bg-white"
-                          value={dataEditMahasiswa.beasiswa || ''}
+                          value={dataEditMahasiswa.status || ''}
                           onChange={(e) =>
                             setDataEditMahasiswa({
                               ...dataEditMahasiswa,
-                              beasiswa: e.target.value,
+                              status: e.target.value,
                             })
                           }
-                        />
+                        >
+                        {['Aktif Tinggal', 'Checkout'].map(
+                    (statusTinggal) => (
+                      <option key={statusTinggal} value={statusTinggal}>
+                        {statusTinggal}
+                      </option>
+                    )
+                  )}
+                        </select>
                       </div>
                     </div>
 
@@ -861,90 +951,97 @@ const DataMahasiswa = () => {
         </>
       ) : null}
       <>
-      {showPelanggaranForm && (
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-50 flex justify-center items-center z-50">
-          <div className="bg-white p-6 rounded shadow-lg w-96">
-            <h2 className="text-2xl font-bold mb-4">Tambah Pelanggaran</h2>
-            <form onSubmit={handleSubmitPelanggaran}>
-              <div className="mb-4">
-                <label className="block mb-2">NIM</label>
-                <input
-                  type="text"
-                  value={formData.nim}
-                  onChange={handleInputChange}
-                  disabled
-                  className="w-full px-3 py-2 border border-gray-300 rounded"
-                />
-              </div>
-              <div className="mb-4">
-                <label className="block mb-2">Nama</label>
-                <input
-                  type="text"
-                  value={formData.nama}
-                  onChange={handleInputChange}
-                  disabled
-                  className="w-full px-3 py-2 border border-gray-300 rounded"
-                />
-              </div>
-              <div className="mb-4">
-                <label className="block mb-2">Gedung</label>
-                <input
-                  type="text"
-                  value={formData.gedung}
-                  onChange={handleInputChange}
-                  disabled
-                  className="w-full px-3 py-2 border border-gray-300 rounded"
-                />
-              </div>
-              <div className="mb-4">
-                <label className="block mb-2">No. Kamar</label>
-                <input
-                  type="text"
-                  value={formData.noKamar}
-                  onChange={handleInputChange}
-                  disabled
-                  className="w-full px-3 py-2 border border-gray-300 rounded"
-                />
-              </div>
-              <div className="mb-4">
-                <label className="block mb-2">Tanggal Pelanggaran</label>
-                <input
-                  type="date"
-                  value={formData.tanggalPelanggaran || ''}
-                  onChange={(e) => setFormData({ ...formData, tanggalPelanggaran: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded"
-                  max={new Date().toISOString().split("T")[0]}
-                  required
-                />
-              </div>
-              <div className="mb-4">
-                <label className="block mb-2">Keterangan</label>
-                <textarea
-                  value={formData.keterangan}
-                  onChange={(e) => setFormData({ ...formData, keterangan: e.target.value })}
-                  className="resize-none w-full px-3 py-2 border border-gray-300 rounded"
-                  required
-                />
-              </div>
-              <div className="flex justify-end">
-                <button
-                  type="submit"
-                  className="bg-green-500 text-white px-4 py-2 rounded"
-                >
-                  Simpan
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowPelanggaranForm(false)}
-                  className="bg-red-500 text-white px-4 py-2 ml-2 rounded"
-                >
-                  Batal
-                </button>
-              </div>
-            </form>
+        {showPelanggaranForm && (
+          <div className="fixed inset-0 bg-gray-500 bg-opacity-50 flex justify-center items-center z-50">
+            <div className="bg-white p-6 rounded shadow-lg w-96">
+              <h2 className="text-2xl font-bold mb-4">Tambah Pelanggaran</h2>
+              <form onSubmit={handleSubmitPelanggaran}>
+                <div className="mb-4">
+                  <label className="block mb-2">NIM</label>
+                  <input
+                    type="text"
+                    value={formData.nim}
+                    onChange={handleInputChange}
+                    disabled
+                    className="w-full px-3 py-2 border border-gray-300 rounded"
+                  />
+                </div>
+                <div className="mb-4">
+                  <label className="block mb-2">Nama</label>
+                  <input
+                    type="text"
+                    value={formData.nama}
+                    onChange={handleInputChange}
+                    disabled
+                    className="w-full px-3 py-2 border border-gray-300 rounded"
+                  />
+                </div>
+                <div className="mb-4">
+                  <label className="block mb-2">Gedung</label>
+                  <input
+                    type="text"
+                    value={formData.gedung}
+                    onChange={handleInputChange}
+                    disabled
+                    className="w-full px-3 py-2 border border-gray-300 rounded"
+                  />
+                </div>
+                <div className="mb-4">
+                  <label className="block mb-2">No. Kamar</label>
+                  <input
+                    type="text"
+                    value={formData.noKamar}
+                    onChange={handleInputChange}
+                    disabled
+                    className="w-full px-3 py-2 border border-gray-300 rounded"
+                  />
+                </div>
+                <div className="mb-4">
+                  <label className="block mb-2">Tanggal Pelanggaran</label>
+                  <input
+                    type="date"
+                    value={formData.tanggalPelanggaran || ''}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        tanggalPelanggaran: e.target.value,
+                      })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded"
+                    max={new Date().toISOString().split('T')[0]}
+                    required
+                  />
+                </div>
+                <div className="mb-4">
+                  <label className="block mb-2">Keterangan</label>
+                  <textarea
+                    value={formData.keterangan}
+                    onChange={(e) =>
+                      setFormData({ ...formData, keterangan: e.target.value })
+                    }
+                    className="resize-none w-full px-3 py-2 border border-gray-300 rounded"
+                    required
+                  />
+                </div>
+                <div className="flex justify-end">
+                  <button
+                    type="submit"
+                    className="bg-green-500 text-white px-4 py-2 rounded"
+                  >
+                    Simpan
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowPelanggaranForm(false)}
+                    className="bg-red-500 text-white px-4 py-2 ml-2 rounded"
+                  >
+                    Batal
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
-        </div>
-      )}
+        )}
       </>
       <ToastContainer limit={1} position="top-right" />
     </>
