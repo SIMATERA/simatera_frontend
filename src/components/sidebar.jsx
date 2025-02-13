@@ -37,7 +37,7 @@ const Sidebar = ({ role, activeMenu, setActiveMenu }) => {
         {getMenuItems().map((item) => (
           <li key={item.key}>
             <Link
-              href={`/admin/${item.key}`}
+              href={`/${role}/${item.key}`}
               className={`w-full flex items-center gap-2 text-left p-3 rounded-md ${
                 activeMenu === item.key
                   ? 'bg-orange-700'
