@@ -27,13 +27,6 @@ export default function KakakAsrama() {
 
   return (
     <div className="flex h-screen bg-[#F5F6FA]">
-      {/* Sidebar dengan role kakak asrama */}
-      <Sidebar
-        role="kasra"
-        activeMenu={activeMenu}
-        setActiveMenu={setActiveMenu}
-      />
-
       <div className="flex-1 flex flex-col">
         {/* PageHeading bagian atas */}
         <PageHeading
