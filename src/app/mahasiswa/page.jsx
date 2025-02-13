@@ -36,12 +36,6 @@ export default function Mahasiswa() {
 
   return (
     <div className="flex h-screen bg-[#F5F6FA]">
-      {/* Sidebar dengan role mahasiswa */}
-      <Sidebar
-        role="mahasiswa"
-        activeMenu={activeMenu}
-        setActiveMenu={setActiveMenu}
-      />
 
       <div className="flex-1 flex flex-col">
         {/* PageHeading bagian atas */}
@@ -74,8 +68,6 @@ export default function Mahasiswa() {
               </div>
             </div>
           )}
-          {activeMenu === 'Data Pelanggaran' && <DataPelanggaranMahasiswa />}
-          {activeMenu === 'Pengaduan' && <CreatePengaduan />}
         </div>
       </div>
     </div>
