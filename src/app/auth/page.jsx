@@ -21,7 +21,7 @@ const LoginPage = () => {
   // 🔹 Data default (admin & kakak asrama)
   const defaultData = [
     { email: 'admin@itera.ac.id', password: 'admin123', role: 'admin' },
-    { email: 'kasra@itera.ac.id', password: 'kasra123', role: 'kakak-asrama' },
+    { email: 'kasra@itera.ac.id', password: 'kasra123', role: 'kasra' },
     ...getDataMahasiswa(),
   ];
 

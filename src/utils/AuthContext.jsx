@@ -1,21 +1,20 @@
+// @/utils/AuthContext.js
 'use client';
 
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 const AuthContext = createContext();
 
-export const AuthProvider = ({ children }) => {
+export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
+  const router = useRouter();
 
+  // Cek localStorage saat aplikasi dimuat
   useEffect(() => {
-    // Pastikan kita memeriksa bahwa localStorage ada dan nilai tidak "null"
-    if (typeof window !== 'undefined') {
-      const savedUser = localStorage.getItem('user');
-      if (savedUser && savedUser !== 'null') {
-        setUser(JSON.parse(savedUser));
-      } else {
-        setUser(null);
-      }
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
     }
   }, []);
 
@@ -25,8 +24,15 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
+    // Hapus user dari state
     setUser(null);
+    
+    // Hapus dari localStorage
     localStorage.removeItem('user');
+    
+    // Redirect ke halaman login dengan replace
+    // Gunakan replace untuk mencegah navigasi back ke dashboard
+    router.replace('/');
   };
 
   return (
@@ -34,6 +40,28 @@ export const AuthProvider = ({ children }) => {
       {children}
     </AuthContext.Provider>
   );
-};
+}
 
-export const useAuth = () => useContext(AuthContext);
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+}
+
+// Middleware untuk protected routes
+export function withAuth(Component) {
+  return function ProtectedRoute(props) {
+    const { user } = useAuth();
+    const router = useRouter();
+
+    useEffect(() => {
+      if (!user) {
+        router.replace('/');
+      }
+    }, [user, router]);
+
+    return user ? <Component {...props} /> : null;
+  };
+}
