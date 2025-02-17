@@ -49,17 +49,18 @@ export const getAllMahasiswa = () => {
 };
 
 // Fungsionalitas yang sama bisa diterapkan untuk Kasra, Pelanggaran, dan Pengumuman:
-export const saveDataKasra = (nim, kasra) => {
+export const getDataKasra = () => {
   if (typeof window !== 'undefined') {
-    let mahasiswa = getDataMahasiswa(nim) || {};
-    mahasiswa.kasra = kasra;
-    saveDataMahasiswa(nim, mahasiswa);
+    const data = localStorage.getItem('kasraData');
+    return data ? JSON.parse(data) : [];
   }
-};
+  return [];
+}
 
-export const getDataKasra = (nim) => {
-  const mahasiswa = getDataMahasiswa(nim);
-  return mahasiswa ? mahasiswa.kasra || [] : [];
+export const saveDataKasra = (data) => {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('kasraData', JSON.stringify(data));
+  }
 };
 
 // Fungsi untuk data pelanggaran per mahasiswa
@@ -80,28 +81,40 @@ export const saveDataPelanggaranMahasiswa = (nim, data) => {
 };
 
 // Fungsi untuk data pengaduan per mahasiswa
-export const saveDataPengaduanMahasiswa = (nim, data) => {
-  if (typeof window !== 'undefined') {
-    try {
-      // Simpan data dengan key berdasarkan NIM
-      localStorage.setItem(`pengaduanData_${nim}`, JSON.stringify(data));
-    } catch (error) {
-      console.error('Gagal menyimpan data pengaduan:', error);
-    }
+export const getDataPengaduanMahasiswa = (nim) => {
+  try {
+    const data = localStorage.getItem(`pengaduan_${nim}`);
+    if (!data) return [];
+    
+    const parsedData = JSON.parse(data);
+    
+    // Ensure all items have IDs and required fields
+    return parsedData.map(item => ({
+      ...item,
+      id: item.id || uuidv4(),
+      type: item.type || 'mahasiswa',
+      createdAt: item.createdAt || new Date().toISOString()
+    }));
+  } catch (error) {
+    console.error('Error getting pengaduan data:', error);
+    return [];
   }
 };
 
-export const getDataPengaduanMahasiswa = (nim) => {
-  if (typeof window !== 'undefined') {
-    try {
-      const data = localStorage.getItem(`pengaduanData_${nim}`);
-      return data ? JSON.parse(data) : [];
-    } catch (error) {
-      console.error('Gagal mengambil data pengaduan:', error);
-      return [];
-    }
+export const saveDataPengaduanMahasiswa = (nim, data) => {
+  try {
+    // Ensure all items have necessary properties before saving
+    const validatedData = data.map(item => ({
+      ...item,
+      id: item.id || uuidv4(),
+      type: item.type || 'mahasiswa',
+      createdAt: item.createdAt || new Date().toISOString()
+    }));
+    
+    localStorage.setItem(`pengaduan_${nim}`, JSON.stringify(validatedData));
+  } catch (error) {
+    console.error('Error saving pengaduan data:', error);
   }
-  return [];
 };
 
 // Hapus data pengaduan mahasiswa berdasarkan NIM
@@ -155,40 +168,79 @@ export const getAllPelanggaran = () => {
 
 // Fungsi agregator untuk mengambil _semua_ data pengaduan dari seluruh mahasiswa
 // Mengambil semua data pengaduan dari localStorage yang key-nya dimulai dengan "pengaduanData_"
-export const getAllPengaduan = () => {
-  if (typeof window !== 'undefined') {
-    const keys = Object.keys(localStorage).filter((key) =>
-      key.startsWith('pengaduanData_')
-    );
-    let allData = [];
-    keys.forEach((key) => {
-      const data = localStorage.getItem(key);
-      if (data) {
-        try {
-          // Pastikan data adalah string JSON yang valid
-          if (typeof data === 'string' && data.trim().startsWith('[')) {
-            const parsed = JSON.parse(data);
-            if (Array.isArray(parsed)) {
-              // Tambahkan key ke setiap item untuk menghindari duplikasi
-              const dataWithKey = parsed.map((item) => ({
-                ...item,
-                storageKey: key, // Tambahkan key sebagai referensi
-              }));
-              allData = allData.concat(dataWithKey);
-            }
-          } else {
-            console.warn(`Data for key ${key} is not a valid JSON array.`);
-          }
-        } catch (error) {
-          console.error('Error parsing data for key', key, error);
+
+
+// Contoh implementasi fungsi localStorage
+// Function to get all pengaduan data from localStorage
+export const getAllDataPengaduanMahasiswa = () => {
+  try {
+    // Get all keys from localStorage
+    const keys = Object.keys(localStorage);
+    
+    // Filter keys that start with 'pengaduan_'
+    const pengaduanKeys = keys.filter(key => key.startsWith('pengaduan_'));
+    
+    // Combine all pengaduan data into one array
+    const allPengaduan = pengaduanKeys.reduce((acc, key) => {
+      try {
+        const data = JSON.parse(localStorage.getItem(key));
+        if (Array.isArray(data)) {
+          // Add the NIM from the key to each item if not present
+          const nim = key.replace('pengaduan_', '');
+          const dataWithNIM = data.map(item => ({
+            ...item,
+            nim: item.nim || nim,
+            type: item.type || 'mahasiswa',
+            id: item.id || generateId()
+          }));
+          return [...acc, ...dataWithNIM];
         }
-      } else {
-        console.warn(`Data for key ${key} is undefined or null.`);
+        return acc;
+      } catch (e) {
+        console.error(`Error parsing data for key ${key}:`, e);
+        return acc;
       }
-    });
-    return allData;
+    }, []);
+
+    return allPengaduan;
+  } catch (error) {
+    console.error('Error getting all pengaduan data:', error);
+    return [];
   }
-  return [];
+};
+
+// Function to update specific pengaduan data
+export const updatePengaduanStatus = (pengaduanId, newStatus) => {
+  try {
+    const keys = Object.keys(localStorage);
+    const pengaduanKeys = keys.filter(key => key.startsWith('pengaduan_'));
+    
+    for (const key of pengaduanKeys) {
+      const data = JSON.parse(localStorage.getItem(key));
+      if (Array.isArray(data)) {
+        const updatedData = data.map(item => {
+          if (item.id === pengaduanId) {
+            return { ...item, status: newStatus };
+          }
+          return item;
+        });
+        
+        if (JSON.stringify(data) !== JSON.stringify(updatedData)) {
+          localStorage.setItem(key, JSON.stringify(updatedData));
+          return true; // Successfully updated
+        }
+      }
+    }
+    return false; // Pengaduan not found
+  } catch (error) {
+    console.error('Error updating pengaduan status:', error);
+    return false;
+  }
+};
+
+// Helper function to generate a simple ID if needed
+const generateId = () => {
+  return Math.random().toString(36).substr(2, 9);
 };
 
 export const getDataPengumuman = () => {
@@ -230,3 +282,13 @@ export function clearLocalStorage() {
     localStorage.clear();
   }
 }
+
+export const getDataPembayaran = (nim) => {
+  const data = localStorage.getItem(`pembayaran_${nim}`);
+  return data ? JSON.parse(data) : null; // Mengembalikan data pembayaran berdasarkan NIM
+};
+
+export const saveDataPembayaran = (nim, pembayaran) => {
+  localStorage.setItem(`pembayaran_${nim}`, JSON.stringify(pembayaran)); // Menyimpan data pembayaran di localStorage
+};
+
