@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { useAuth } from '@/utils/AuthContext';
-import { getDataMahasiswa } from '@/utils/localStorage';
+import { getDataKasra, getDataMahasiswa } from '@/utils/localStorage';
 
 const LoginPage = () => {
   const router = useRouter();
@@ -21,7 +21,7 @@ const LoginPage = () => {
   // 🔹 Data default (admin & kakak asrama)
   const defaultData = [
     { email: 'admin@itera.ac.id', password: 'admin123', role: 'admin' },
-    { email: 'kasra@itera.ac.id', password: 'kasra123', role: 'kasra' },
+    ...getDataKasra(),
     ...getDataMahasiswa(),
   ];
 
