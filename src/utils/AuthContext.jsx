@@ -26,10 +26,10 @@ export function AuthProvider({ children }) {
   const logout = () => {
     // Hapus user dari state
     setUser(null);
-    
+
     // Hapus dari localStorage
     localStorage.removeItem('user');
-    
+
     // Redirect ke halaman login dengan replace
     // Gunakan replace untuk mencegah navigasi back ke dashboard
     router.replace('/');
