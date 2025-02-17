@@ -1,12 +1,13 @@
 'use client';
+
 import { useState, useEffect } from 'react';
-import {
-  saveDataPengaduanMahasiswa,
-  getDataPengaduanMahasiswa,
-} from '@/utils/localStorage';
+import { v4 as uuidv4 } from 'uuid';
+import { saveDataPengaduanMahasiswa, getDataPengaduanMahasiswa, getDataMahasiswa } from '@/utils/localStorage';
 import { useAuth } from '@/utils/AuthContext';
+import PageHeading from '@/components/PageHeading';
 
 const TABLE_HEAD = [
+  'ID',
   'NIM',
   'Nama',
   'Gedung',
@@ -28,9 +29,26 @@ const PengaduanPage = () => {
   const [pengaduanList, setPengaduanList] = useState([]);
   const [selectedImage, setSelectedImage] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showForm, setShowForm] = useState(false);  // Track the visibility of the form
+  const [dataMahasiswa, setDataMahasiswa] = useState(null);
 
   useEffect(() => {
-    if (user && user.nim) {
+    if (user?.nim) {
+      const savedData = getDataMahasiswa();
+      const mahasiswa = savedData.find(item => item.nim === user.nim);
+      setDataMahasiswa(mahasiswa);
+
+      if (mahasiswa) {
+        setNama(mahasiswa.nama);
+        setNIM(mahasiswa.nim);
+        setGedung(mahasiswa.gedung);
+        setKamar(mahasiswa.noKamar);
+      }
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (user?.nim) {
       const data = getDataPengaduanMahasiswa(user.nim);
       setPengaduanList(data);
     }
@@ -58,11 +76,13 @@ const PengaduanPage = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!nama || !nim || !gedung || !kamar || !keterangan) {
+    if (!keterangan) {
       alert('Harap isi semua field!');
       return;
     }
+
     const newPengaduan = {
+      id: uuidv4(), // Generate unique ID
       nama,
       nim,
       gedung,
@@ -71,118 +91,177 @@ const PengaduanPage = () => {
       gambar,
       status: 'Belum Dikerjakan',
       tanggal: new Date().toLocaleDateString(),
+      createdAt: new Date().toISOString(), // Add timestamp for sorting
+      type: 'mahasiswa',
     };
+
     const updatedList = [...pengaduanList, newPengaduan];
-    if (user && user.nim) {
+    // Sort by creation date, newest first
+    updatedList.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    if (user?.nim) {
       saveDataPengaduanMahasiswa(user.nim, updatedList);
       setPengaduanList(updatedList);
     }
-    setNama('');
-    setNIM('');
-    setGedung('');
-    setKamar('');
+
     setKeterangan('');
     setGambar('');
+    setShowForm(false);
   };
 
   return (
-    <div className="flex justify-center">
-      <div className="max-w-2xl mx-auto mt-10 p-6 bg-white rounded-lg shadow-md">
-        <h2 className="text-2xl font-bold mb-4">Form Pengaduan</h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {[
-            ['Nama', nama, setNama],
-            ['NIM', nim, setNIM],
-            ['Gedung', gedung, setGedung],
-            ['Kamar', kamar, setKamar],
-          ].map(([label, value, setter], i) => (
-            <div key={i}>
-              <label className="block font-medium">{label}</label>
-              <input
-                type="text"
-                className="w-full p-2 border rounded-md"
-                value={value}
-                onChange={(e) => setter(e.target.value)}
-              />
-            </div>
-          ))}
-          <div>
-            <label className="block font-medium">Keterangan</label>
-            <textarea
-              className="w-full p-2 border rounded-md"
-              rows="4"
-              value={keterangan}
-              onChange={(e) => setKeterangan(e.target.value)}
-            ></textarea>
-          </div>
-          <div>
-            <label className="block font-medium">Gambar</label>
-            <input
-              type="file"
-              className="w-full p-2 border rounded-md"
-              accept="image/*"
-              onChange={handleFileChange}
-            />
-          </div>
+    <div className="flex flex-col min-h-screen">
+      <PageHeading title="Pengaduan Kasra" />
+      <div className="p-6">
+        <div className="flex justify-end mb-4">
+          {/* Button to show/hide form */}
           <button
-            type="submit"
-            className="w-full bg-blue-500 text-white py-2 rounded-md hover:bg-blue-600"
+            onClick={() => setShowForm(!showForm)}
+            className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600"
           >
-            Kirim Pengaduan
+            {showForm ? 'Batal' : 'Tambah Pengaduan'}
           </button>
-        </form>
-      </div>
-      <div className="max-w-4xl mx-auto mt-10 p-6 bg-white rounded-lg shadow-md">
-        <h2 className="text-2xl font-bold mb-4">Data Pengaduan</h2>
-        <table className="w-full border-collapse border border-gray-300">
-          <thead>
-            <tr className="bg-gray-200">
-              {TABLE_HEAD.map((item) => (
-                <th key={item} className="border p-2">
-                  {item}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {pengaduanList.map((item, index) => (
-              <tr key={index} className="text-center">
-                {[
-                  item.nim,
-                  item.nama,
-                  item.gedung,
-                  item.kamar,
-                  item.keterangan,
-                  item.tanggal,
-                ].map((data, i) => (
-                  <td key={i} className="border p-2">
-                    {data}
-                  </td>
-                ))}
-                <td className="border p-2">
-                  <span
-                    className={`px-3 py-1 rounded text-white ${item.status === 'Belum Dikerjakan' ? 'bg-red-500' : item.status === 'Sedang Dikerjakan' ? 'bg-yellow-500' : 'bg-green-500'}`}
-                  >
-                    {item.status}
-                  </span>
-                </td>
-                <td className="border p-2">
-                  {item.gambar && (
-                    <img
-                      src={item.gambar}
-                      alt="Pengaduan"
-                      className="w-16 h-16 object-cover cursor-pointer"
-                      onClick={() => openModal(item.gambar)}
-                    />
-                  )}
-                </td>
+        </div>
+
+        {/* Form Section (Overlay) */}
+        {showForm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+            <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-lg">
+              <h2 className="text-2xl font-bold mb-4">Form Pengaduan Kasra</h2>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <label className="block font-medium">Nama</label>
+                  <input
+                    type="text"
+                    className="w-full p-2 border rounded-md"
+                    value={nama}
+                    onChange={(e) => setNama(e.target.value)}
+                    readOnly
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-medium">NIM</label>
+                  <input
+                    type="text"
+                    className="w-full p-2 border rounded-md"
+                    value={nim}
+                    onChange={(e) => setNIM(e.target.value)}
+                    readOnly
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-medium">Gedung</label>
+                  <input
+                    type="text"
+                    className="w-full p-2 border rounded-md"
+                    value={gedung}
+                    onChange={(e) => setGedung(e.target.value)}
+                    readOnly
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-medium">No Kamar</label>
+                  <input
+                    type="text"
+                    className="w-full p-2 border rounded-md"
+                    value={kamar}
+                    onChange={(e) => setKamar(e.target.value)}
+                    readOnly
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-medium">Keterangan</label>
+                  <textarea
+                    className="w-full p-2 border rounded-md"
+                    rows="4"
+                    value={keterangan}
+                    onChange={(e) => setKeterangan(e.target.value)}
+                  ></textarea>
+                </div>
+
+                <div>
+                  <label className="block font-medium">Gambar</label>
+                  <input
+                    type="file"
+                    className="w-full p-2 border rounded-md"
+                    accept="image/*"
+                    onChange={handleFileChange}
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full bg-blue-500 text-white py-2 rounded-md hover:bg-blue-600"
+                >
+                  Kirim Pengaduan
+                </button>
+                <button
+                  onClick={() => setShowForm(false)}
+                  className="w-full bg-red-300 text-white py-2 rounded-md hover:bg-red-600"
+                >
+                  batal
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Data Pengaduan Section */}
+        <div className="overflow-x-auto bg-white rounded-lg shadow">
+          <table className="w-full border-collapse border border-gray-300">
+            <thead>
+              <tr className="bg-gray-200">
+                {TABLE_HEAD.map((item) => (
+                      <th key={item} className="border p-2">{item}</th>
+                    ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {pengaduanList.map((item) => (
+                <tr key={item.id} className="text-center">
+                  <td className="border p-2">{item.id.slice(0, 8)}</td>
+                  <td className="border p-2">{item.nim}</td>
+                  <td className="border p-2">{item.nama}</td>
+                  <td className="border p-2">{item.gedung}</td>
+                  <td className="border p-2">{item.kamar}</td>
+                  <td className="border p-2">{item.keterangan}</td>
+                  <td className="border p-2">{item.tanggal}</td>
+                  <td className="border p-2">
+                    <span
+                          className={`px-3 py-1 rounded text-white ${item.status === 'Belum Dikerjakan'
+                              ? 'bg-red-500'
+                              : item.status === 'Sedang Dikerjakan'
+                                ? 'bg-yellow-500'
+                                : 'bg-green-500'
+                            }`}
+                        >
+                          {item.status}
+                        </span>
+                      </td>
+                      <td className="border p-2">
+                        {item.gambar && (
+                          <img
+                            src={item.gambar}
+                            alt="Pengaduan"
+                            className="w-16 h-16 object-cover cursor-pointer"
+                            onClick={() => openModal(item.gambar)}
+                          />
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Image Modal */}
         {isModalOpen && (
           <div
-            className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50"
+            className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50"
             onClick={closeModal}
           >
             <div
