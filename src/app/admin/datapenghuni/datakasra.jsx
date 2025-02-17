@@ -4,12 +4,15 @@ import {
   ExclamationTriangleIcon,
   TrashIcon,
   PlusIcon,
+  ArrowUpTrayIcon,
 } from '@heroicons/react/24/outline';
 import Swal from 'sweetalert2';
 import dayjs from 'dayjs';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { ToastContainer } from 'react-toastify';
+import * as XLSX from 'xlsx';
+
 import {
   getDataKasra,
   saveDataKasra,
@@ -23,12 +26,12 @@ const TABLE_HEAD = [
   'Gedung',
   'No Kamar',
   'Email',
-  'Tempat Lahir',
   'Tanggal Lahir',
+  'Tempat Lahir',
   'Asal',
-  'Beasiswa',
+  'Status',
   'Golongan UKT',
-  'Action',
+  'Aksi',
 ];
 
 // Data dummy kasra
@@ -41,11 +44,13 @@ const dummyData = [
     gedung: 'TB1',
     noKamar: 'A101',
     email: 'john@example.com',
-    tempatLahir: 'Jakarta',
     tanggalLahir: '2000-01-01',
+    tempatLahir: 'Jakarta',
     asal: 'Jakarta',
+    status: 'Aktif Tinggal',
     golonganUKT: 3,
-    beasiswa: 'Bidikmisi',
+    password: 'kasra123',
+    role: 'kasra',
   },
 ];
 
@@ -55,11 +60,14 @@ const DataKasra = () => {
   const [showModal, setShowModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [editErrorMessage, setEditErrorMessage] = useState('');
-  const [DataKasra, setDataKasra] = useState(() => {
+  const [dataKasra, setDataKasra] = useState(() => {
     const savedData = getDataKasra();
     return savedData.length > 0 ? savedData : dummyData;
   });
   const [dataEditKasra, setDataEditKasra] = useState({});
+  const [file, setFile] = useState(null);
+  const [fileName, setFileName] = useState('Pilih file...');
+  const [mounted, setMounted] = useState(false);
 
   const initialFormState = {
     nim: '',
@@ -72,13 +80,26 @@ const DataKasra = () => {
     tanggalLahir: '',
     asal: '',
     golonganUKT: 1,
-    beasiswa: '',
+    status: 'Aktif Tinggal',
+    password: '',
   };
   const [formData, setFormData] = useState(initialFormState);
 
   useEffect(() => {
-    saveDataKasra(DataKasra);
-  }, [DataKasra]);
+    setMounted(true);
+    const savedData = getDataKasra();
+    setDataKasra(savedData.length > 0 ? savedData : dummyData);
+  }, []);
+
+  useEffect(() => {
+    if (mounted) {
+      saveDataKasra(dataKasra);
+    }
+  }, [dataKasra, mounted]);
+
+  useEffect(() => {
+    saveDataKasra(dataKasra);
+  }, [dataKasra]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -99,10 +120,15 @@ const DataKasra = () => {
       id: Date.now(),
       tanggalLahir:
         formData.tanggalLahir || new Date().toISOString().split('T')[0],
+      password: formData.password || 'kasra123',
+      role: 'kasra',
     };
 
     // Update state dan otomatis tersimpan ke localStorage via useEffect
-    setDataKasra((prev) => [...prev, newKasra]);
+    const updatedData = [...dataKasra, newKasra];
+    setDataKasra(updatedData);
+    // Simpan ke localStorage
+    saveDataKasra(updatedData);
     toast.update(idd, {
       render: 'Data berhasil ditambahkan',
       type: 'success',
@@ -114,7 +140,7 @@ const DataKasra = () => {
   };
 
   const handleEdit = (id) => {
-    const kasra = DataKasra.find((m) => m.id === id);
+    const kasra = dataKasra.find((m) => m.id === id);
     setDataEditKasra({ ...kasra });
     setShowModal(true);
   };
@@ -122,12 +148,16 @@ const DataKasra = () => {
   const handleSubmitEdit = (e) => {
     e.preventDefault();
     // Update data di state
-    if (!dataEditKasra.nim || !dataEditKasra.nama || !dataEditKasra.email) {
+    if (
+      !dataEditKasra.nim ||
+      !dataEditKasra.nama ||
+      !dataEditKasra.email
+    ) {
       setEditErrorMessage('NIM, Nama, dan Email wajib diisi!');
       return;
     }
     setIsLoading(false);
-    const idd = toast.loading('Edit Data Kasra...');
+    const idd = toast.loading('Edit Data Mahasiswa...');
     setDataKasra((prev) =>
       prev.map((item) =>
         item.id === dataEditKasra.id ? { ...dataEditKasra } : item
@@ -138,7 +168,7 @@ const DataKasra = () => {
       render: 'Data berhasil diubah',
       type: 'success',
       isLoading: false,
-      autoClose: 1000,
+      autoClose: 2000,
     });
     setEditErrorMessage('');
     setShowModal(false);
@@ -156,12 +186,92 @@ const DataKasra = () => {
     }).then((result) => {
       if (result.isConfirmed) {
         // Filter data dan update state
-        const filteredData = DataKasra.filter((m) => m.id !== id);
+        const filteredData = dataKasra.filter((m) => m.id !== id);
         setDataKasra(filteredData);
         Swal.fire('Terhapus!', 'Data berhasil dihapus.', 'success');
       }
     });
   };
+
+  const handleFileChange = (e) => {
+    const uploadedFile = e.target.files[0];
+    if (uploadedFile) {
+      setFile(uploadedFile);
+      setFileName(uploadedFile.name);
+    }
+  };
+
+  const handleUpload = () => {
+    if (!file) {
+      alert('Pilih file terlebih dahulu!');
+      return;
+    }
+
+    const fileExtension = file.name.split('.').pop().toLowerCase();
+    if (fileExtension === 'csv' || fileExtension === 'xlsx') {
+      const reader = new FileReader();
+
+      reader.onload = (event) => {
+        const binaryString = event.target.result;
+        const workbook = XLSX.read(binaryString, { type: 'binary' });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        let data = XLSX.utils.sheet_to_json(sheet);
+
+        const formatDate = (excelDate) => {
+          if (typeof excelDate === 'number') {
+            // Jika tanggal berupa angka serial Excel, konversi ke Date
+            return dayjs(new Date((excelDate - 25569) * 86400 * 1000)).format(
+              'DD/MM/YYYY'
+            );
+          } else if (typeof excelDate === 'string') {
+            // Deteksi format dan konversi dengan benar
+            const parsedDate = dayjs(
+              excelDate,
+              ['DD/MM/YYYY', 'D/M/YYYY', 'YYYY-MM-DD'],
+              true
+            );
+            if (parsedDate.isValid()) {
+              return parsedDate.format('DD/MM/YYYY');
+            } else {
+              console.warn('Format tanggal tidak dikenali:', excelDate);
+              return 'Invalid Date';
+            }
+          }
+          return 'Invalid Date';
+        };
+
+        // Proses data
+        data = data.map((item) => ({
+          id: Date.now() + Math.random(), // ID unik
+          nim: String(item.NIM),
+          nama: item.Nama,
+          prodi: item.Prodi,
+          gedung: item.Gedung,
+          noKamar: item['No Kamar'],
+          email: item.Email,
+          tempatLahir: item['Tempat Lahir'],
+          tanggalLahir: formatDate(item['Tanggal Lahir']), // Pertahankan format DD/MM/YYYY
+          asal: item.Asal,
+          status: item.Status,
+          golonganUKT: item['Golongan UKT'],
+          password: item.NIM || 'kasra123',
+        }));
+
+        console.log('Data setelah format:', data);
+
+        // Gabungkan data baru dengan data yang sudah ada
+        setDataKasra((prevState) => [...prevState, ...data]);
+      };
+
+      reader.readAsBinaryString(file);
+    } else {
+      alert('Hanya file CSV atau XLSX yang diperbolehkan.');
+    }
+  };
+
+  if (!mounted) {
+    return null;
+  }
   return (
     <>
       <ToastContainer />
@@ -339,15 +449,34 @@ const DataKasra = () => {
                 </select>
               </div>
 
-              {/* Beasiswa */}
+              {/* Status */}
               <div className="form-group">
                 <label className="block uppercase text-gray-700 text-xs font-bold mb-2">
-                  Beasiswa
+                  Status Tinggal
+                </label>
+                <select
+                  name="status"
+                  value={formData.status}
+                  onChange={handleInputChange}
+                  className="select select-bordered w-full"
+                >
+                  {['Aktif Tinggal', 'Checkout'].map((statusTinggal) => (
+                    <option key={statusTinggal} value={statusTinggal}>
+                      {statusTinggal}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Password */}
+              <div className="form-group">
+                <label className="block uppercase text-gray-700 text-xs font-bold mb-2">
+                  Password
                 </label>
                 <input
-                  type="text"
-                  name="beasiswa"
-                  value={formData.beasiswa}
+                  type="password"
+                  name="password"
+                  value={formData.password}
                   onChange={handleInputChange}
                   className="input input-bordered w-full"
                   required
@@ -374,61 +503,91 @@ const DataKasra = () => {
           </div>
         </div>
       ) : (
-        <div className="bg-white m-5 rounded-lg">
-          <div className="flex justify-between p-5">
-            <h1 className="text-3xl font-bold">Data Kasra</h1>
-            <button
-              className="btn bg-[#FDE9CC] hover:bg-[#E0924A] text-gray-500 hover:text-white flex items-center"
-              onClick={() => setShowForm(true)}
-            >
-              <PlusIcon className="h-6 w-6 text-green-500 mr-2" />
-              <span className="font-bold">Tambah Kasra</span>
-            </button>
+          <div className="p-4 md:p-6">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+              <h1 className="text-2xl md:text-3xl font-bold">Data Kasra</h1>
+              <div className="w-full md:w-auto flex flex-col-reverse md:flex-row gap-3">
+                {/* Upload Section */}
+                <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
+                  <input
+                    type="file"
+                    accept=".csv, .xlsx"
+                    onChange={handleFileChange}
+                    className="border p-2 rounded w-full md:w-48 lg:w-64 text-sm"
+                  />
+                  <button
+                    onClick={handleUpload}
+                    className="bg-blue-500 text-white px-4 py-2 rounded flex items-center justify-center gap-2"
+                  >
+                    <ArrowUpTrayIcon className="h-5 w-5" />
+                    <span className="text-sm md:text-base">Upload</span>
+                  </button>
+                </div>
+
+                {/* Tambah Buttons */}
+                <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
+                  <button
+                    className="btn bg-[#FDE9CC] hover:bg-[#E0924A] text-gray-500 hover:text-white flex items-center justify-center gap-2 p-2 md:p-3 rounded text-sm md:text-base"
+                    onClick={() => setShowForm(true)}
+                  >
+                    <PlusIcon className="h-5 w-5 text-green-500" />
+                    <span>Tambah Kasra</span>
+                  </button>
+                </div>
+              </div>
           </div>
 
-          <div className="overflow-x-auto p-5">
-            <table className="table w-full">
-              <thead>
+            {/* Table */}
+            <div className="overflow-x-auto rounded-lg border">
+              <table className="min-w-full">
+                <thead className="bg-gray-50">
                 <tr>
                   {TABLE_HEAD.map((head) => (
-                    <th key={head} className="bg-gray-100">
+                    <th
+                      key={head}
+                      className="px-4 py-3 text-left text-xs md:text-sm font-medium text-gray-500 uppercase whitespace-nowrap"
+                    >
                       {head}
                     </th>
                   ))}
                 </tr>
               </thead>
-              <tbody>
-                {DataKasra.map((kasra) => (
+                <tbody className="divide-y divide-gray-200">
+                  {dataKasra.map((kasra) => (
                   <tr key={kasra.id} className="odd:bg-[#FDE9CC] even:bg-white">
-                    <td>{kasra.nim}</td>
-                    <td>{kasra.nama}</td>
-                    <td>{kasra.prodi}</td>
-                    <td>{kasra.gedung}</td>
-                    <td>{kasra.noKamar}</td>
-                    <td>{kasra.email}</td>
-                    <td>{kasra.tempatLahir}</td>
-                    <td>
+                      <td className="px-4 py-2 text-sm">{kasra.nim}</td>
+                      <td className="px-4 py-2 text-sm">{kasra.nama}</td>
+                      <td className="px-4 py-2 text-sm">{kasra.prodi}</td>
+                      <td className="px-4 py-2 text-sm">{kasra.gedung}</td>
+                      <td className="px-4 py-2 text-sm">{kasra.noKamar}</td>
+                      <td className="px-4 py-2 text-sm">{kasra.email}</td>
+                      <td className="px-4 py-2 text-sm">{kasra.tempatLahir}</td>
+                      <td className="px-4 py-2 text-sm">
                       {dayjs(kasra.tanggalLahir, [
                         'DD/MM/YYYY',
                         'YYYY-MM-DD',
                       ]).format('DD/MM/YYYY')}
                     </td>
-                    <td>{kasra.asal}</td>
-                    <td>{kasra.beasiswa}</td>
-                    <td>{kasra.golonganUKT}</td>
-                    <td>
-                      <div className="flex gap-2">
+                      <td className="px-4 py-2 text-sm">{kasra.asal}</td>
+                      <td className="px-4 py-2 text-sm">{kasra.status}</td>
+                      <td className="px-4 py-2 text-sm text-center">
+                        {kasra.golonganUKT}
+                      </td>
+
+                      {/* Action */}
+                      <td className="px-4 py-2 text-sm">
+                        <div className="flex justify-center gap-2">
                         <button
                           onClick={() => handleEdit(kasra.id)}
-                          className="text-blue-500 hover:text-blue-700"
+                            className="p-1 hover:text-blue-600"
                         >
-                          <FiEdit size={20} />
+                            <FiEdit className="h-5 w-5" />
                         </button>
                         <button
                           onClick={() => handleDelete(kasra.id)}
-                          className="text-red-500 hover:text-red-700"
+                            className="p-1 hover:text-red-600"
                         >
-                          <TrashIcon className="h-6 w-6 text-red-500" />
+                            <TrashIcon className="h-5 w-5" />
                         </button>
                       </div>
                     </td>
@@ -602,6 +761,7 @@ const DataKasra = () => {
                               tanggalLahir: e.target.value,
                             })
                           }
+                          max={new Date().toISOString().split('T')[0]}
                         />
                       </div>
                     </div>
@@ -648,18 +808,26 @@ const DataKasra = () => {
 
                       <div className="w-full px-3">
                         <label className="block uppercase tracking-wide text-gray-700 text-xs font-bold mb-2">
-                          Beasiswa
+                          Status Tinggal
                         </label>
-                        <input
+                        <select
                           className="appearance-none block w-full bg-gray-200 text-gray-700 border rounded py-3 px-4 mb-3 leading-tight focus:outline-none focus:bg-white"
-                          value={dataEditKasra.beasiswa || ''}
+                          value={dataEditKasra.status || ''}
                           onChange={(e) =>
                             setDataEditKasra({
                               ...dataEditKasra,
-                              beasiswa: e.target.value,
+                              status: e.target.value,
                             })
                           }
-                        />
+                        >
+                          {['Aktif Tinggal', 'Checkout'].map(
+                            (statusTinggal) => (
+                              <option key={statusTinggal} value={statusTinggal}>
+                                {statusTinggal}
+                              </option>
+                            )
+                          )}
+                        </select>
                       </div>
                     </div>
 
