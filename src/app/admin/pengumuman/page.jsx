@@ -17,7 +17,11 @@ const CreatePengumuman = () => {
   }, []);
 
   const validateFile = (file) => {
-    const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    const allowedTypes = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    ];
     const maxSize = 5 * 1024 * 1024; // 5MB
 
     if (!allowedTypes.includes(file.type)) {
@@ -42,7 +46,7 @@ const CreatePengumuman = () => {
         setFile({
           name: selectedFile.name,
           type: selectedFile.type,
-          data: reader.result
+          data: reader.result,
         });
       };
       reader.readAsDataURL(selectedFile);
@@ -61,13 +65,13 @@ const CreatePengumuman = () => {
     let updatedPengumuman;
     if (editId) {
       updatedPengumuman = pengumuman.map((item) =>
-        item.id === editId 
-          ? { 
-              ...item, 
-              judul, 
+        item.id === editId
+          ? {
+              ...item,
+              judul,
               deskripsi,
-              file: file || item.file // Keep existing file if no new file uploaded
-            } 
+              file: file || item.file, // Keep existing file if no new file uploaded
+            }
           : item
       );
       setEditId(null);
@@ -78,7 +82,7 @@ const CreatePengumuman = () => {
         judul,
         deskripsi,
         tanggal: new Date().toLocaleDateString(),
-        file: file
+        file: file,
       };
       updatedPengumuman = [...pengumuman, newPengumuman];
       toast.success('Pengumuman berhasil dibuat!');
@@ -118,7 +122,7 @@ const CreatePengumuman = () => {
   };
 
   return (
-    <div className="flex min-h-screen bg-[#F5F6FA]">
+    <div className="flex bg-[#F5F6FA]">
       <div className="flex-1 flex flex-col">
         <PageHeading title="Pengumuman" />
 
@@ -138,7 +142,9 @@ const CreatePengumuman = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Deskripsi</label>
+              <label className="block text-sm font-medium mb-1">
+                Deskripsi
+              </label>
               <textarea
                 value={deskripsi}
                 onChange={(e) => setDeskripsi(e.target.value)}
@@ -205,8 +211,19 @@ const CreatePengumuman = () => {
                           onClick={() => handleDownload(item.file)}
                           className="text-blue-500 hover:underline flex items-center gap-2"
                         >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-5 w-5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                            />
                           </svg>
                           Download {item.file.name}
                         </button>
