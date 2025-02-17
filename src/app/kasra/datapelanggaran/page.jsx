@@ -22,7 +22,6 @@ const TABLE_HEAD = [
   'No Kamar',
   'Tanggal Pelanggaran',
   'Keterangan Pelanggaran',
-  'Aksi',
 ];
 
 const DataPelanggaranKasra = () => {
@@ -69,113 +68,48 @@ const DataPelanggaranKasra = () => {
   };
 
   return (
-    <div className="flex min-h-screen bg-[#F5F6FA]">
+    <div className="flex ">
       <div className="flex-1 flex flex-col">
         <PageHeading title="Data Pelanggaran" />
-        <div className="flex-1 p-6">
-          <table className="min-w-full mt-4 border-collapse border border-gray-300">
-            <thead className="bg-gray-50">
-              <tr>
-                {TABLE_HEAD.map((head) => (
-                  <th
-                    key={head}
-                    className="px-4 py-3 text-left text-xs md:text-sm font-medium text-gray-500 uppercase whitespace-nowrap"
-                  >
-                    {head}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {pelanggaranList.map((pelanggaran) => (
-                <tr
-                  key={`${pelanggaran.nim}_${pelanggaran.tanggalPelanggaran}`}
-                  className="odd:bg-[#FDE9CC] even:bg-white text-center"
-                >
-                  <td className="px-4 py-2 text-sm">{pelanggaran.nim}</td>
-                  <td className="px-4 py-2 text-sm">{pelanggaran.nama}</td>
-                  <td className="px-4 py-2 text-sm">{pelanggaran.gedung}</td>
-                  <td className="px-4 py-2 text-sm">{pelanggaran.noKamar}</td>
-                  <td className="px-4 py-2 text-sm">
-                    {dayjs(pelanggaran.tanggalPelanggaran, [
-                      'DD/MM/YYYY',
-                      'YYYY-MM-DD',
-                    ]).format('DD/MM/YYYY')}
-                  </td>
-                  <td className="px-4 py-2 text-sm">
-                    {pelanggaran.keterangan}
-                  </td>
-                  <td className="px-4 py-2 text-sm">
-                    <button
-                      onClick={() => handleEdit(pelanggaran)}
-                      className="p-1 hover:text-blue-600"
-                      aria-label="Edit Pelanggaran"
+        <div className="flex-1 p-6 ">
+          <div className="overflow-x-auto rounded-lg border">
+            <table className="min-w-full">
+              <thead className="bg-gray-50">
+                <tr className="text-center">
+                  {TABLE_HEAD.map((head) => (
+                    <th
+                      key={head}
+                      className="px-4 py-3 text-left text-xs md:text-sm font-medium text-gray-500 uppercase whitespace-nowrap"
                     >
-                      <FiEdit size={20} />
-                    </button>
-                  </td>
+                      {head}
+                    </th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-
-          {showModal && (
-            <div
-              className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50"
-              onClick={() => setShowModal(null)}
-            >
-              <div
-                className="bg-white p-5 rounded shadow-lg"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <h2 className="text-xl font-bold mb-4">
-                  Edit Data Pelanggaran
-                </h2>
-                <input
-                  type="date"
-                  value={showModal.tanggalPelanggaran}
-                  onChange={(e) =>
-                    setShowModal((prev) => ({
-                      ...prev,
-                      tanggalPelanggaran: e.target.value,
-                    }))
-                  }
-                  className="block w-full border p-2 mb-2"
-                  max={new Date().toISOString().split('T')[0]}
-                  required
-                />
-                <input
-                  type="text"
-                  value={showModal.keterangan}
-                  onChange={(e) =>
-                    setShowModal((prev) => ({
-                      ...prev,
-                      keterangan: e.target.value,
-                    }))
-                  }
-                  className="block w-full border p-2 mb-2"
-                  required
-                />
-                {errorMessage && (
-                  <p className="text-red-500 text-sm mb-2">{errorMessage}</p>
-                )}
-                <div className="flex justify-end space-x-2">
-                  <button
-                    onClick={() => setShowModal(null)}
-                    className="bg-gray-400 text-white px-4 py-2 rounded"
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {pelanggaranList.map((pelanggaran) => (
+                  <tr
+                    key={`${pelanggaran.nim}_${pelanggaran.tanggalPelanggaran}`}
+                    className="odd:bg-[#FDE9CC] even:bg-white"
                   >
-                    Batal
-                  </button>
-                  <button
-                    onClick={handleSaveEdit}
-                    className="bg-green-500 text-white px-4 py-2 rounded"
-                  >
-                    Simpan
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
+                    <td className="px-4 py-2 text-sm">{pelanggaran.nim}</td>
+                    <td className="px-4 py-2 text-sm">{pelanggaran.nama}</td>
+                    <td className="px-4 py-2 text-sm">{pelanggaran.gedung}</td>
+                    <td className="px-4 py-2 text-sm">{pelanggaran.noKamar}</td>
+                    <td className="px-4 py-2 text-sm">
+                      {dayjs(pelanggaran.tanggalPelanggaran, [
+                        'DD/MM/YYYY',
+                        'YYYY-MM-DD',
+                      ]).format('DD/MM/YYYY')}
+                    </td>
+                    <td className="px-4 py-2 text-sm">
+                      {pelanggaran.keterangan}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
           <ToastContainer />
         </div>
       </div>
