@@ -69,7 +69,7 @@ const DataPelanggaranAdmin = () => {
   };
 
   return (
-    <div className="flex min-h-screen bg-[#F5F6FA]">
+    <div className="flex">
       <div className="flex-1 flex flex-col">
         <PageHeading title="Data Pelanggaran" />
         <div className="flex-1 p-6">
