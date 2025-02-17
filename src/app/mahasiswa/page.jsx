@@ -35,8 +35,7 @@ export default function Mahasiswa() {
   }, []);
 
   return (
-    <div className="flex h-screen bg-[#F5F6FA]">
-
+    <div className="flex bg-[#F5F6FA]">
       <div className="flex-1 flex flex-col">
         {/* PageHeading bagian atas */}
         <PageHeading
