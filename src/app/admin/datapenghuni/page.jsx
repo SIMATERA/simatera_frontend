@@ -16,7 +16,7 @@ const KelolaData = () => {
   ];
 
   return (
-    <div className="flex min-h-screen bg-[#F5F6FA]">
+    <div className="flex bg-[#F5F6FA]">
       {/* Dropdown Pilihan */}
       <div className="flex-1 flex flex-col">
         <PageHeading title="Data Mahasiswa" />
