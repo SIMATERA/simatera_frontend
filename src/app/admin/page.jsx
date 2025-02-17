@@ -9,6 +9,7 @@ import KelolaData from './datapenghuni/page';
 import DataPelanggaran from './datapelanggaran/page';
 import CreatePengumuman from './pengumuman/page';
 import DataPengaduanPage from './datapengaduan/page';
+import DataPembayaran from './datapembayaran/page';
 import { getDataPengumuman } from '@/utils/localStorage';
 
 const AdminDashboard = () => {
@@ -61,34 +62,45 @@ const AdminDashboard = () => {
                     <p className="text-gray-700 mt-2">{item.deskripsi}</p>
                     {item.file && (
                       <div className="mt-3 flex items-center gap-2">
-                        <button 
-                          onClick={()=>{
+                        <button
+                          onClick={() => {
                             const link = document.createElement('a');
                             link.href = item.file.data;
                             link.download = item.file.name;
                             document.body.appendChild(link);
                             link.click();
                             document.body.removeChild(link);
-                        }}
+                          }}
                           className="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 transition colors"
                         >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                        Download {item.file.name} 
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-5 w-5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                            />
+                          </svg>
+                          Download {item.file.name}
                         </button>
                         <span className="text-sm text-gray-500">
-                          {item.file.type.includes('pdf') ? 'PDF' : 'Word'} Document
+                          {item.file.type.includes('pdf') ? 'PDF' : 'Word'}{' '}
+                          Document
                         </span>
-
                       </div>
-                    ) 
-                    
-                    }
+                    )}
                   </div>
                 ))
               ) : (
-                <p className="text-gray-500 text-center py-4">Tidak ada pengumuman.</p>
+                <p className="text-gray-500 text-center py-4">
+                  Tidak ada pengumuman.
+                </p>
               )}
             </div>
           </div>
@@ -99,6 +111,8 @@ const AdminDashboard = () => {
         return <KelolaData />;
       case 'Data Pelanggaran':
         return <DataPelanggaran />;
+      case 'Data Pembayaran':
+        return <DataPembayaran />;
       case 'Data Pengaduan':
         return <DataPengaduanPage />;
       default:
@@ -112,8 +126,7 @@ const AdminDashboard = () => {
   }
 
   return (
-    <div className="flex min-h-screen bg-[#F5F6FA]">
-
+    <div className="flex ">
       {/* Konten utama */}
       <div className="flex-1 flex flex-col">
         <PageHeading
@@ -121,11 +134,9 @@ const AdminDashboard = () => {
           name={adminName}
           profileImage={profileImage}
         />
-        
+
         {/* Main content */}
-        <div className="flex-1 p-6">
-          {renderContent()}
-        </div>
+        <div className="flex-1 p-6">{renderContent()}</div>
       </div>
     </div>
   );
