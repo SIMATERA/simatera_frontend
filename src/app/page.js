@@ -13,7 +13,7 @@ const HomePage = () => {
     router.push('/auth');
   }, [router]);
 
-  return <div>Redirecting...</div>;
+  return null;
 };
 
 export default HomePage;
