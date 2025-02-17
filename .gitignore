@@ -12,6 +12,7 @@
 /turbopack
 /out
 /.next
+/package-lock.json
 
 # testing
 /coverage
