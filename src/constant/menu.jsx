@@ -61,7 +61,7 @@ export const MENU_ITEMS_KASRA = [
 ];
 
 export const MENU_ITEMS_MAHASISWA = [
-  { name: 'Beranda', key: 'Beranda', icon: <Home size={20} /> },
+  { name: 'Beranda', key: '', icon: <Home size={20} /> },
   {
     name: 'Data Pelanggaran',
     key: 'datapelanggaran',
