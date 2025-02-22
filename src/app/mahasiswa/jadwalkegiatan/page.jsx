@@ -7,7 +7,7 @@ import CreateJadwalKegiatan from '@/app/kasra/jadwalkegiatan/page';
 import { useRouter } from 'next/router';
 import { useAuth } from '@/utils/AuthContext';
 
-export default function Mahasiswa() {
+export default function JadwalKegiatanMahasiswa() {
   const { user } = useAuth();
   const [activeMenu, setActiveMenu] = useState('Beranda');
   const [jadwalKegiatan, setJadwalKegiatan] = useState([]);
