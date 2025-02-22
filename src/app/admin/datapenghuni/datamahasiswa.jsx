@@ -21,6 +21,7 @@ import {
 import dayjs from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
 import ActionDropdown from '@/components/ActionDropdown';
+import { getDataKamar } from '@/utils/localStorage';
 
 dayjs.extend(customParseFormat);
 const formatTanggal = (tanggal) => {
@@ -64,7 +65,7 @@ const TABLE_HEAD = [
 // Data dummy mahasiswa
 const dummyData = [
   {
-    id: 1,
+    id: 120140001,
     nim: '120140001',
     nama: 'John Doe',
     prodi: 'Teknik Informatika',
@@ -90,7 +91,7 @@ const DataMahasiswa = () => {
   const [editErrorMessage, setEditErrorMessage] = useState('');
   const [dataMahasiswa, setDataMahasiswa] = useState(() => {
     const savedData = getDataMahasiswa();
-    return savedData.length > 0 ? savedData : dummyData;
+    return savedData.length > 0 ? savedData : [];
   });
   const [dataEditMahasiswa, setDataEditMahasiswa] = useState({});
   const [dataPelanggaran, setDataPelanggaran] = useState(() => {
@@ -102,6 +103,7 @@ const DataMahasiswa = () => {
   const [mounted, setMounted] = useState(false);
 
   const initialFormState = {
+    id: '',
     nim: '',
     nama: '',
     prodi: '',
@@ -123,6 +125,13 @@ const DataMahasiswa = () => {
   const [showPelanggaranForm, setShowPelanggaranForm] = useState(false);
   const [selectedMahasiswa, setSelectedMahasiswa] = useState(null);
 
+  const [availableRooms, setAvailableRooms] = useState([]);
+
+  useEffect(() => {
+    const dormRooms = JSON.parse(localStorage.getItem('dormRooms') || '[]');
+    setAvailableRooms(dormRooms);
+  }, []);
+
   const handleTambahPelanggaran = (mahasiswa) => {
     setSelectedMahasiswa(mahasiswa);
     setFormData({
@@ -130,7 +139,7 @@ const DataMahasiswa = () => {
       nama: mahasiswa.nama,
       gedung: mahasiswa.gedung,
       noKamar: mahasiswa.noKamar,
-      tanggalPelanggaran: '', // Pastikan tidak undefined
+      tanggalPelanggaran: '',
       keteranganPelanggaran: '',
     });
     setShowPelanggaranForm(true);
@@ -172,7 +181,7 @@ const DataMahasiswa = () => {
   useEffect(() => {
     setMounted(true);
     const savedData = getDataMahasiswa();
-    setDataMahasiswa(savedData.length > 0 ? savedData : dummyData);
+    setDataMahasiswa(savedData.length > 0 ? savedData : []);
   }, []);
 
   useEffect(() => {
@@ -187,86 +196,270 @@ const DataMahasiswa = () => {
     }
   }, [pelanggaran]);
 
+  const findAvailableRoom = (jenisKelamin) => {
+    // Filter rooms based on gender
+    const gedungSesuaiGender = availableRooms.filter(kamar => {
+      const isLakiLaki = jenisKelamin.toLowerCase() === 'laki-laki';
+      return isLakiLaki ?
+        ['TB2', 'TB3'].includes(kamar.gedung) :  // Laki-laki di TB2 dan TB3
+        ['TB1', 'TB4', 'TB5'].includes(kamar.gedung);  // Perempuan di TB1, TB4, TB5
+    });
+
+    // Find rooms that still have capacity
+    const roomsWithCapacity = gedungSesuaiGender.filter(kamar =>
+      kamar.terisi < kamar.kapasitas
+    );
+
+    if (roomsWithCapacity.length === 0) {
+      throw new Error(`Tidak ada kamar tersedia untuk ${jenisKelamin}`);
+    }
+
+    // Prioritize rooms that already have occupants but aren't full
+    const roomWithOccupants = roomsWithCapacity.find(kamar => kamar.terisi > 0);
+    const selectedRoom = roomWithOccupants || roomsWithCapacity[0];
+
+    return selectedRoom;
+  };
+
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
-    if (name === 'jenisKelamin') {
-      if (value === 'laki-laki') {
-        setFormData({ ...formData, gedung: 'TB1' }); // Default Gedung for Laki-laki
-      } else if (value === 'perempuan') {
-        setFormData({ ...formData, gedung: 'TB3' }); // Default Gedung for Perempuan
-      }
+    if (name === 'nim') {
+      setFormData({
+        ...formData,
+        [name]: value,
+        id: value, // Set ID sama dengan NIM
+        password: value || 'mahasiswa123', // Set default password ke NIM
+      });
+    } else if (name === 'jenisKelamin') {
+      setFormData({
+        ...formData,
+        [name]: value,
+        gedung: value.toLowerCase() === 'laki-laki' ? 'TB2' : 'TB1',
+      });
+    } else {
+      setFormData({ ...formData, [name]: value });
     }
   };
 
-  const handleSubmitAdd = (e) => {
+  const handleSubmitAdd = async (e) => {
     e.preventDefault();
+
+    // Validations
     if (!formData.nim || !formData.nama || !formData.email) {
       setErrorMessage('NIM, Nama, dan Email wajib diisi!');
       return;
     }
-    setIsLoading(true);
-    const idd = toast.loading('Create Data Mahasiswa...');
 
-    const newMahasiswa = {
-      ...formData,
-      id: Date.now(),
-      tanggalLahir:
-        formData.tanggalLahir || new Date().toISOString().split('T')[0],
-      password: formData.password || 'mahasiswa123',
-      role: 'mahasiswa',
-    };
+    const isNIMExist = dataMahasiswa.some((m) => m.nim === formData.nim);
+    if (isNIMExist) {
+      setErrorMessage('NIM sudah terdaftar!');
+      return;
+    }
 
-    const updatedData = [...dataMahasiswa, newMahasiswa];
-    setDataMahasiswa(updatedData);
-    // Simpan data ke localStorage
-    saveDataMahasiswa(updatedData);
-    toast.update(idd, {
-      render: 'Data berhasil ditambahkan',
-      type: 'success',
-      isLoading: false,
-      autoClose: 3000,
-    });
-    setFormData(initialFormState);
-    setShowForm(false);
+    try {
+      setIsLoading(true);
+      const idd = toast.loading('Create Data Mahasiswa...');
+
+      // Pastikan gedung dan noKamar sudah dipilih
+      if (!formData.gedung || !formData.noKamar) {
+        toast.error('Pilih Gedung dan Nomor Kamar terlebih dahulu');
+        setIsLoading(false);
+        return;
+      }
+
+      // Cari kamar yang dipilih
+      const selectedRoom = availableRooms.find(
+        room => room.gedung === formData.gedung && room.nomorKamar === formData.noKamar
+      );
+
+      if (!selectedRoom) {
+        toast.error('Kamar yang dipilih tidak valid');
+        setIsLoading(false);
+        return;
+      }
+
+      const newMahasiswa = {
+        ...formData,
+        id: formData.nim,
+        gedung: formData.gedung, // Gunakan gedung yang dipilih
+        noKamar: formData.noKamar, // Gunakan nomor kamar yang dipilih
+        tanggalLahir: formData.tanggalLahir || new Date().toISOString().split('T')[0],
+        password: formData.nim || 'mahasiswa123',
+        role: 'mahasiswa',
+      };
+
+      // Update room occupancy
+      const updatedRooms = availableRooms.map(room => {
+        if (room.gedung === formData.gedung && room.nomorKamar === formData.noKamar) {
+          return {
+            ...room,
+            terisi: room.terisi + 1
+          };
+        }
+        return room;
+      });
+
+      // Update available rooms in state and localStorage
+      setAvailableRooms(updatedRooms);
+      localStorage.setItem('dormRooms', JSON.stringify(updatedRooms));
+
+      const updatedData = [...dataMahasiswa, newMahasiswa];
+      setDataMahasiswa(updatedData);
+      saveDataMahasiswa(updatedData);
+
+      toast.update(idd, {
+        render: 'Data berhasil ditambahkan',
+        type: 'success',
+        isLoading: false,
+        autoClose: 3000,
+      });
+
+      setFormData(initialFormState);
+      setErrorMessage('');
+      setShowForm(false);
+      setIsLoading(false);
+    } catch (error) {
+      toast.error(error.message);
+      setIsLoading(false);
+    }
   };
 
-  const handleEdit = (id) => {
-    const mahasiswa = dataMahasiswa.find((m) => m.id === id);
+  const handleEdit = (nim) => {
+    const mahasiswa = dataMahasiswa.find((m) => m.nim === nim);
     setDataEditMahasiswa({ ...mahasiswa });
     setShowModal(true);
   };
 
+  const validateRoomChange = (newGedung, newNoKamar, jenisKelamin) => {
+    // Cek kesesuaian gedung dengan jenis kelamin
+    const gedungValidasi = jenisKelamin.toLowerCase() === 'laki-laki'
+      ? ['TB1', 'TB2']
+      : ['TB3', 'TB4', 'TB5'];
+
+    if (!gedungValidasi.includes(newGedung)) {
+      throw new Error(`Gedung tidak sesuai dengan jenis kelamin ${jenisKelamin}`);
+    }
+
+    // Cari kamar yang dipilih
+    const selectedRoom = availableRooms.find(
+      room => room.gedung === newGedung && room.nomorKamar === newNoKamar
+    );
+
+    // Validasi ketersediaan kamar
+    if (!selectedRoom) {
+      throw new Error('Kamar tidak ditemukan');
+    }
+
+    if (selectedRoom.terisi >= selectedRoom.kapasitas) {
+      throw new Error('Kamar sudah penuh');
+    }
+
+    return selectedRoom;
+  };
+
+  // Update handleSubmitEdit dengan validasi NIM
   const handleSubmitEdit = (e) => {
     e.preventDefault();
-    // Update data di state
-    if (
-      !dataEditMahasiswa.nim ||
-      !dataEditMahasiswa.nama ||
-      !dataEditMahasiswa.email
-    ) {
+
+    // Validasi dasar
+    if (!dataEditMahasiswa.nim || !dataEditMahasiswa.nama || !dataEditMahasiswa.email) {
       setEditErrorMessage('NIM, Nama, dan Email wajib diisi!');
       return;
     }
-    setIsLoading(false);
-    const idd = toast.loading('Edit Data Mahasiswa...');
-    setDataMahasiswa((prev) =>
-      prev.map((item) =>
-        item.id === dataEditMahasiswa.id ? { ...dataEditMahasiswa } : item
-      )
-    );
 
-    toast.update(idd, {
-      render: 'Data berhasil diubah',
-      type: 'success',
-      isLoading: false,
-      autoClose: 2000,
-    });
-    setEditErrorMessage('');
-    setShowModal(false);
+    // Pastikan gedung dan nomor kamar dipilih
+    if (!dataEditMahasiswa.gedung || !dataEditMahasiswa.noKamar) {
+      toast.error('Pilih Gedung dan Nomor Kamar terlebih dahulu');
+      return;
+    }
+
+    // Cek NIM duplikat
+    const isNIMExist = dataMahasiswa.some(
+      (m) => m.nim === dataEditMahasiswa.nim && m.id !== dataEditMahasiswa.id
+    );
+    if (isNIMExist) {
+      setEditErrorMessage('NIM sudah terdaftar!');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const idd = toast.loading('Edit Data Mahasiswa...');
+
+      // Cari data mahasiswa asli
+      const originalStudent = dataMahasiswa.find(m => m.nim === dataEditMahasiswa.nim);
+
+      // Ambil data kamar dari localStorage
+      const dormRooms = JSON.parse(localStorage.getItem('dormRooms') || '[]');
+
+      // Jika gedung atau kamar berubah, update occupancy
+      if (originalStudent.gedung !== dataEditMahasiswa.gedung ||
+        originalStudent.noKamar !== dataEditMahasiswa.noKamar) {
+
+        // Kurangi penghuni di kamar lama
+        const updatedRoomsDecrement = dormRooms.map(room => {
+          if (room.gedung === originalStudent.gedung &&
+            room.nomorKamar === originalStudent.noKamar) {
+            return {
+              ...room,
+              terisi: Math.max(0, room.terisi - 1)
+            };
+          }
+          return room;
+        });
+
+        // Tambah penghuni di kamar baru
+        const updatedRoomsFinal = updatedRoomsDecrement.map(room => {
+          if (room.gedung === dataEditMahasiswa.gedung &&
+            room.nomorKamar === dataEditMahasiswa.noKamar) {
+            return {
+              ...room,
+              terisi: room.terisi + 1
+            };
+          }
+          return room;
+        });
+
+        // Simpan kembali ke localStorage
+        localStorage.setItem('dormRooms', JSON.stringify(updatedRoomsFinal));
+
+        // Perbarui state availableRooms
+        setAvailableRooms(updatedRoomsFinal);
+      }
+
+      // Update data mahasiswa
+      const updatedData = dataMahasiswa.map((item) =>
+        item.nim === originalStudent.nim ? { ...dataEditMahasiswa } : item
+      );
+
+      // Simpan data mahasiswa
+      setDataMahasiswa(updatedData);
+      saveDataMahasiswa(updatedData);
+
+      // Notifikasi sukses
+      toast.update(idd, {
+        render: 'Data berhasil diubah',
+        type: 'success',
+        isLoading: false,
+        autoClose: 2000,
+      });
+
+      // Reset state
+      setEditErrorMessage('');
+      setShowModal(false);
+      setIsLoading(false);
+
+    } catch (error) {
+      console.error('Error updating student:', error);
+      toast.error('Gagal mengupdate data mahasiswa');
+      setIsLoading(false);
+    }
   };
 
-  const handleDelete = (id) => {
+
+
+  const handleDelete = (nim) => {
     Swal.fire({
       title: 'Apakah Anda yakin?',
       text: 'Data yang dihapus tidak dapat dikembalikan!',
@@ -277,8 +470,9 @@ const DataMahasiswa = () => {
       confirmButtonText: 'Ya, hapus!',
     }).then((result) => {
       if (result.isConfirmed) {
-        const filteredData = dataMahasiswa.filter((m) => m.id !== id);
+        const filteredData = dataMahasiswa.filter((m) => m.nim !== nim);
         setDataMahasiswa(filteredData);
+        saveDataMahasiswa(filteredData);
         Swal.fire('Terhapus!', 'Data berhasil dihapus.', 'success');
       }
     });
@@ -294,155 +488,138 @@ const DataMahasiswa = () => {
 
   const handleUpload = () => {
     if (!file) {
-      alert('Pilih file terlebih dahulu!');
+      toast.error('Pilih file terlebih dahulu!');
       return;
     }
 
     const fileExtension = file.name.split('.').pop().toLowerCase();
-    if (fileExtension === 'csv' || fileExtension === 'xlsx') {
-      const reader = new FileReader();
+    if (fileExtension !== 'csv' && fileExtension !== 'xlsx') {
+      toast.error('Hanya file CSV atau XLSX yang diperbolehkan.');
+      return;
+    }
 
-      reader.onload = (event) => {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
         const binaryString = event.target.result;
         const workbook = XLSX.read(binaryString, { type: 'binary' });
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
         let data = XLSX.utils.sheet_to_json(sheet);
 
+        // Format tanggal
         const formatDate = (excelDate) => {
           if (typeof excelDate === 'number') {
-            return dayjs(new Date((excelDate - 25569) * 86400 * 1000)).format(
-              'DD/MM/YYYY'
-            );
+            return dayjs(new Date((excelDate - 25569) * 86400 * 1000)).format('DD/MM/YYYY');
           } else if (typeof excelDate === 'string') {
-            const parsedDate = dayjs(
-              excelDate,
-              ['DD/MM/YYYY', 'D/M/YYYY', 'YYYY-MM-DD'],
-              true
-            );
-            if (parsedDate.isValid()) {
-              return parsedDate.format('DD/MM/YYYY');
-            } else {
-              console.warn('Format tanggal tidak dikenali:', excelDate);
-              return 'Invalid Date';
-            }
+            const parsedDate = dayjs(excelDate, ['DD/MM/YYYY', 'D/M/YYYY', 'YYYY-MM-DD'], true);
+            return parsedDate.isValid() ? parsedDate.format('DD/MM/YYYY') : 'Invalid Date';
           }
           return 'Invalid Date';
         };
 
-        // Konstanta untuk struktur gedung
-        const FLOORS_PER_BUILDING = 5;
-        const ROOMS_PER_FLOOR = 23;
-        const MAX_PER_ROOM = 4;
-        const GEDUNG_LAKI = ['TB1', 'TB2'];
-        const GEDUNG_PEREMPUAN = ['TB3', 'TB4', 'TB5'];
+        // Ambil data kamar dari localStorage
+        const dormRooms = JSON.parse(localStorage.getItem('dormRooms') || '[]');
 
-        // Struktur data untuk tracking okupansi
-        const occupancy = {
-          TB1: { floors: {}, totalOccupants: 0 },
-          TB2: { floors: {}, totalOccupants: 0 },
-          TB3: { floors: {}, totalOccupants: 0 },
-          TB4: { floors: {}, totalOccupants: 0 },
-          TB5: { floors: {}, totalOccupants: 0 }
-        };
+        // Pisahkan mahasiswa berdasarkan jenis kelamin
+        const dataLakiLaki = data.filter(item => item['Jenis Kelamin'] === 'Laki-laki');
+        const dataPerempuan = data.filter(item => item['Jenis Kelamin'] === 'Perempuan');
 
-        // Inisialisasi struktur lantai dan kamar
-        Object.keys(occupancy).forEach(gedung => {
-          for (let floor = 1; floor <= FLOORS_PER_BUILDING; floor++) {
-            occupancy[gedung].floors[floor] = {
-              rooms: {},
-              totalOccupants: 0
-            };
-            for (let room = 1; room <= ROOMS_PER_FLOOR; room++) {
-              occupancy[gedung].floors[floor].rooms[room] = 0;
-            }
-          }
+        // Cari kamar untuk laki-laki di TB2 dan TB3
+        const kamarLakiLaki = dormRooms.filter(kamar =>
+          ['TB2', 'TB3'].includes(kamar.gedung) && kamar.terisi < kamar.kapasitas
+        );
+
+        // Cari kamar untuk perempuan di TB1, TB4, TB5
+        const kamarPerempuan = dormRooms.filter(kamar =>
+          ['TB1', 'TB4', 'TB5'].includes(kamar.gedung) && kamar.terisi < kamar.kapasitas
+        );
+
+        // Proses mahasiswa laki-laki
+        const processedLakiLaki = dataLakiLaki.map((item, index) => {
+          const roomIndex = index % kamarLakiLaki.length;
+          const selectedRoom = kamarLakiLaki[roomIndex];
+
+          // Update occupancy
+          selectedRoom.terisi += 1;
+
+          return {
+            id: String(item.NIM),
+            nim: String(item.NIM),
+            nama: item.Nama,
+            prodi: item.Prodi,
+            gedung: selectedRoom.gedung,
+            noKamar: selectedRoom.nomorKamar,
+            email: item.Email,
+            tempatLahir: item['Tempat Lahir'],
+            tanggalLahir: formatDate(item['Tanggal Lahir']),
+            asal: item.Asal,
+            status: 'Aktif Tinggal',
+            golonganUKT: item['Golongan UKT'],
+            jenisKelamin: item['Jenis Kelamin'],
+            password: String(item.NIM) || 'mahasiswa123',
+            role: 'mahasiswa',
+          };
         });
 
-        // Format nomor kamar: LKNN (L=Lantai, K=Kamar)
-        const formatRoomNumber = (floor, roomNum) => {
-          return `${floor}${roomNum.toString().padStart(2, '0')}`;
-        };
+        // Proses mahasiswa perempuan
+        const processedPerempuan = dataPerempuan.map((item, index) => {
+          const roomIndex = index % kamarPerempuan.length;
+          const selectedRoom = kamarPerempuan[roomIndex];
 
-        // Mendapatkan gedung yang tersedia
-        const getAvailableBuilding = (jenisKelamin) => {
-          const gedungList = jenisKelamin.toLowerCase() === 'laki-laki'
-            ? GEDUNG_LAKI
-            : GEDUNG_PEREMPUAN;
+          // Update occupancy
+          selectedRoom.terisi += 1;
 
-          return gedungList.reduce((selected, current) => {
-            if (!selected) return current;
-            if (occupancy[current].totalOccupants < occupancy[selected].totalOccupants) {
-              return current;
-            }
-            return selected;
-          });
-        };
+          return {
+            id: String(item.NIM),
+            nim: String(item.NIM),
+            nama: item.Nama,
+            prodi: item.Prodi,
+            gedung: selectedRoom.gedung,
+            noKamar: selectedRoom.nomorKamar,
+            email: item.Email,
+            tempatLahir: item['Tempat Lahir'],
+            tanggalLahir: formatDate(item['Tanggal Lahir']),
+            asal: item.Asal,
+            status: 'Aktif Tinggal',
+            golonganUKT: item['Golongan UKT'],
+            jenisKelamin: item['Jenis Kelamin'],
+            password: String(item.NIM) || 'mahasiswa123',
+            role: 'mahasiswa',
+          };
+        });
 
-        // Mendapatkan kamar yang tersedia di gedung tertentu
-        const getAvailableRoom = (gedung) => {
-          for (let floor = 1; floor <= FLOORS_PER_BUILDING; floor++) {
-            for (let room = 1; room <= ROOMS_PER_FLOOR; room++) {
-              if (occupancy[gedung].floors[floor].rooms[room] < MAX_PER_ROOM) {
-                return {
-                  floor: floor,
-                  roomNum: room,
-                  formattedNumber: formatRoomNumber(floor, room)
-                };
-              }
-            }
-          }
-          throw new Error(`Gedung ${gedung} sudah penuh`);
-        };
+        // Gabungkan data
+        const processedData = [...processedLakiLaki, ...processedPerempuan];
 
-        try {
-          // Proses data dengan assignment kamar
-          data = data.map((item) => {
-            const jenisKelamin = item['Jenis Kelamin'];
-            const gedung = getAvailableBuilding(jenisKelamin);
-            const { floor, roomNum, formattedNumber } = getAvailableRoom(gedung);
+        // Update localStorage dengan kamar yang sudah diupdate
+        localStorage.setItem('dormRooms', JSON.stringify(dormRooms));
 
-            // Update tracking occupancy
-            occupancy[gedung].floors[floor].rooms[roomNum]++;
-            occupancy[gedung].floors[floor].totalOccupants++;
-            occupancy[gedung].totalOccupants++;
+        // Update state
+        const newData = [...dataMahasiswa, ...processedData];
+        setDataMahasiswa(newData);
+        saveDataMahasiswa(newData);
+        setAvailableRooms(dormRooms);
 
-            return {
-              id: Date.now() + Math.random(),
-              nim: String(item.NIM),
-              nama: item.Nama,
-              prodi: item.Prodi,
-              gedung: gedung,
-              lantai: floor,
-              noKamar: formattedNumber,
-              email: item.Email,
-              tempatLahir: item['Tempat Lahir'],
-              tanggalLahir: formatDate(item['Tanggal Lahir']),
-              asal: item.Asal,
-              status: item.Status,
-              golonganUKT: item['Golongan UKT'],
-              jenisKelamin: jenisKelamin,
-              password: String(item.NIM) || 'mahasiswa123',
-              role: 'mahasiswa',
-            };
-          });
+        // Reset file input
+        setFile(null);
+        setFileName('Pilih file...');
 
-          // Log statistik penempatan
-          console.log('Statistik Penempatan:', occupancy);
+        toast.success('Data mahasiswa berhasil diupload dan kamar telah diassign!');
 
-          setDataMahasiswa((prevState) => [...prevState, ...data]);
-          toast.success('Data mahasiswa berhasil diupload dan kamar telah diassign!');
+      } catch (error) {
+        console.error('Error dalam upload file:', error);
+        toast.error('Terjadi kesalahan saat memproses file');
+      }
+    };
 
-        } catch (error) {
-          console.error('Error dalam assignment kamar:', error);
-          toast.error(`Terjadi kesalahan: ${error.message}`);
-        }
-      };
+    reader.onerror = (error) => {
+      console.error('File reading error:', error);
+      toast.error('Gagal membaca file');
+    };
 
-      reader.readAsBinaryString(file);
-    } else {
-      alert('Hanya file CSV atau XLSX yang diperbolehkan.');
-    }
+    reader.readAsBinaryString(file);
   };
+
 
   if (!mounted) {
     return null;
@@ -501,6 +678,32 @@ const DataMahasiswa = () => {
                 />
               </div>
 
+              {/* Jenis Kelamin */}
+              <div className="form-group">
+                <label className="block text-gray-700 text-sm font-medium mb-2">Jenis Kelamin</label>
+                <select
+                  name="jenisKelamin"
+                  value={formData.jenisKelamin}
+                  onChange={(e) => {
+                    const selectedGender = e.target.value;
+                    setFormData({
+                      ...formData,
+                      jenisKelamin: selectedGender,
+                      // Reset gedung when gender changes
+                      gedung: '',
+                      noKamar: ''
+                    });
+                  }}
+                  className="select select-bordered w-full p-3 text-gray-700 rounded-md shadow-sm focus:ring-2 focus:ring-indigo-400"
+                >
+                  {['Laki-laki', 'Perempuan'].map((jenisKelamin) => (
+                    <option key={jenisKelamin} value={jenisKelamin}>
+                      {jenisKelamin}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               {/* Gedung */}
               <div className="form-group">
                 <label className="block text-gray-700 text-sm font-medium mb-2">Gedung</label>
@@ -510,24 +713,65 @@ const DataMahasiswa = () => {
                   onChange={handleInputChange}
                   className="select select-bordered w-full p-3 text-gray-700 rounded-md shadow-sm focus:ring-2 focus:ring-indigo-400"
                 >
-                  {['TB1', 'TB2', 'TB3', 'TB4', 'TB5'].map((gedung) => (
-                    <option key={gedung} value={gedung}>
-                      {gedung}
-                    </option>
-                  ))}
+                  <option value="">Pilih Gedung</option>
+                  {formData.jenisKelamin === 'Laki-laki'
+                    ? ['TB2', 'TB3'].map((gedung) => (
+                      <option key={gedung} value={gedung}>
+                        {gedung}
+                      </option>
+                    ))
+                    : ['TB1', 'TB4', 'TB5'].map((gedung) => (
+                      <option key={gedung} value={gedung}>
+                        {gedung}
+                      </option>
+                    ))
+                  }
                 </select>
               </div>
 
               {/* No Kamar */}
               <div className="form-group">
                 <label className="block text-gray-700 text-sm font-medium mb-2">Nomor Kamar</label>
-                <input
-                  type="text"
+                <select
                   name="noKamar"
                   value={formData.noKamar}
-                  onChange={handleInputChange}
+                  onChange={(e) => {
+                    const selectedRoom = availableRooms.find(room => room.nomorKamar === e.target.value);
+                    if (selectedRoom) {
+                      setFormData({
+                        ...formData,
+                        noKamar: selectedRoom.nomorKamar,
+                        gedung: selectedRoom.gedung
+                      });
+                    }
+                  }}
                   className="input input-bordered w-full p-3 text-gray-700 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
+                  disabled={!formData.gedung} // Disable jika gedung belum dipilih
+                >
+                  <option value="">Pilih Kamar</option>
+                  {availableRooms
+                    .filter(room => {
+                      // Filter kamar berdasarkan gedung yang dipilih dan ketersediaan
+                      return room.gedung === formData.gedung &&
+                        room.status === 'tersedia' &&
+                        room.terisi < room.kapasitas;
+                    })
+                    .sort((a, b) => a.nomorKamar.localeCompare(b.nomorKamar))
+                    .map(room => (
+                      <option
+                        key={room.nomorKamar}
+                        value={room.nomorKamar}
+                      >
+                        {`${room.nomorKamar} (${room.terisi}/${room.kapasitas})`}
+                      </option>
+                    ))
+                  }
+                </select>
+                <p className="text-xs text-gray-500 mt-1">
+                  {!formData.gedung
+                    ? "Pilih gedung terlebih dahulu"
+                    : "Menampilkan kamar yang tersedia di gedung yang dipilih"}
+                </p>
               </div>
 
               {/* Email */}
@@ -827,19 +1071,27 @@ const DataMahasiswa = () => {
                         </label>
                         <select
                           className="appearance-none block w-full bg-gray-200 text-gray-700 border rounded py-3 px-4 mb-3 leading-tight focus:outline-none focus:bg-white"
-                          value={dataEditMahasiswa.gedung || 'TB1'}
-                          onChange={(e) =>
+                          value={dataEditMahasiswa.gedung || ''}
+                          onChange={(e) => {
                             setDataEditMahasiswa({
                               ...dataEditMahasiswa,
                               gedung: e.target.value,
-                            })
-                          }
+                              noKamar: '' // Reset room selection when building changes
+                            });
+                          }}
                         >
-                          {['TB1', 'TB2', 'TB3', 'TB4', 'TB5'].map((gedung) => (
-                            <option key={gedung} value={gedung}>
-                              {gedung}
-                            </option>
-                          ))}
+                          <option value="">Pilih Gedung</option>
+                          {dataEditMahasiswa.jenisKelamin === 'Laki-laki'
+                            ? ['TB2', 'TB3'].map((gedung) => (
+                              <option key={gedung} value={gedung}>
+                                {gedung}
+                              </option>
+                            ))
+                            : ['TB1', 'TB4', 'TB5'].map((gedung) => (
+                              <option key={gedung} value={gedung}>
+                                {gedung}
+                              </option>
+                            ))}
                         </select>
                       </div>
                     </div>
@@ -850,16 +1102,43 @@ const DataMahasiswa = () => {
                         <label className="block uppercase tracking-wide text-gray-700 text-xs font-bold mb-2">
                           No Kamar
                         </label>
-                        <input
+                        <select
                           className="appearance-none block w-full bg-gray-200 text-gray-700 border rounded py-3 px-4 mb-3 leading-tight focus:outline-none focus:bg-white"
                           value={dataEditMahasiswa.noKamar || ''}
-                          onChange={(e) =>
-                            setDataEditMahasiswa({
-                              ...dataEditMahasiswa,
-                              noKamar: e.target.value,
-                            })
-                          }
-                        />
+                          onChange={(e) => {
+                            const selectedRoom = availableRooms.find(
+                              room => room.gedung === dataEditMahasiswa.gedung && room.nomorKamar === e.target.value
+                            );
+                            if (selectedRoom) {
+                              setDataEditMahasiswa({
+                                ...dataEditMahasiswa,
+                                noKamar: selectedRoom.nomorKamar
+                              });
+                            }
+                          }}
+                          disabled={!dataEditMahasiswa.gedung} // Disable if no building is selected
+                        >
+                          <option value="">Pilih Kamar</option>
+                          {availableRooms
+                            .filter(room =>
+                              room.gedung === dataEditMahasiswa.gedung && // Only show rooms for selected building
+                              (room.terisi < room.kapasitas || // Show available rooms
+                                room.nomorKamar === dataEditMahasiswa.noKamar) // Always show current room
+                            )
+                            .sort((a, b) => a.nomorKamar.localeCompare(b.nomorKamar))
+                            .map(room => (
+                              <option
+                                key={room.nomorKamar}
+                                value={room.nomorKamar}
+                                disabled={room.terisi >= room.kapasitas && room.nomorKamar !== dataEditMahasiswa.noKamar}
+                              >
+                                {`${room.nomorKamar} (${room.terisi}/${room.kapasitas})`}
+                              </option>
+                            ))}
+                        </select>
+                        <p className="text-xs text-gray-500 mt-1">
+                          Format: Nomor Kamar (Jumlah Penghuni/Kapasitas)
+                        </p>
                       </div>
 
                       <div className="w-full px-3">
