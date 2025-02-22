@@ -292,3 +292,26 @@ export const saveDataPembayaran = (nim, pembayaran) => {
   localStorage.setItem(`pembayaran_${nim}`, JSON.stringify(pembayaran)); // Menyimpan data pembayaran di localStorage
 };
 
+export const getDataKamar = () => {
+  const dataKamar = localStorage.getItem('dataKamar');
+  return dataKamar ? JSON.parse(dataKamar) : [];
+};
+
+export const saveDataKamar = (data) => {
+  localStorage.setItem('dataKamar', JSON.stringify(data));
+};
+
+export const updateDataKamar = (dataKamar) => {
+  localStorage.setItem('dataKamar', JSON.stringify(dataKamar));
+};
+
+const updatePasswordInMahasiswaData = (nim, newPassword) => {
+  const storedData = localStorage.getItem('mahasiswaData');
+  if (storedData) {
+    const mahasiswaArray = JSON.parse(storedData);
+    const updatedArray = mahasiswaArray.map((mhs) =>
+      mhs.nim === nim ? { ...mhs, password: newPassword } : mhs
+    );
+    localStorage.setItem('mahasiswaData', JSON.stringify(updatedArray));
+  }
+};

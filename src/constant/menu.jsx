@@ -6,6 +6,7 @@ import {
   Megaphone,
   CalendarClock,
   Settings,
+  Bed,
 } from 'lucide-react';
 
 export const MENU_ITEMS_ADMIN = [
@@ -16,6 +17,7 @@ export const MENU_ITEMS_ADMIN = [
     icon: <Megaphone size={20} />,
   },
   { name: 'Data Penghuni', key: 'datapenghuni', icon: <Users size={20} /> },
+  { name: 'Data Kamar', key: 'datakamar', icon: <Bed size={20} /> },
   {
     name: 'Data Pelanggaran',
     key: 'datapelanggaran',

@@ -35,8 +35,31 @@ export function AuthProvider({ children }) {
     router.replace('/');
   };
 
+  const updatePasswordInMahasiswaData = (nim, newPassword) => {
+    const storedData = localStorage.getItem('mahasiswaData');
+    if (storedData) {
+      const mahasiswaArray = JSON.parse(storedData);
+      const updatedArray = mahasiswaArray.map((mhs) =>
+        mhs.nim === nim ? { ...mhs, password: newPassword } : mhs
+      );
+      console.log('Updated mahasiswa data:', updatedArray); // Pastikan data sudah berubah
+      localStorage.setItem('mahasiswaData', JSON.stringify(updatedArray));
+    }
+  };
+
+
+  const updatePassword = (newPassword) => {
+    const updatedUser = { ...user, password: newPassword };
+    login(updatedUser); // Memperbarui state dan localStorage untuk 'user'
+
+    if (updatedUser.role === 'mahasiswa') {
+      updatePasswordInMahasiswaData(updatedUser.nim, newPassword);
+    }
+  };
+
+
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
+    <AuthContext.Provider value={{ user, login, logout, updatePassword }}>
       {children}
     </AuthContext.Provider>
   );
