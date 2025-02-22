@@ -10,6 +10,7 @@ import DataPelanggaran from './datapelanggaran/page';
 import CreatePengumuman from './pengumuman/page';
 import DataPengaduanPage from './datapengaduan/page';
 import DataPembayaran from './datapembayaran/page';
+import DataKamar from './datakamar/page';
 import { getDataPengumuman } from '@/utils/localStorage';
 
 const AdminDashboard = () => {
@@ -109,6 +110,8 @@ const AdminDashboard = () => {
         return <CreatePengumuman />;
       case 'Data Penghuni':
         return <KelolaData />;
+      case 'Data Kamar':
+        return <DataKamar />;
       case 'Data Pelanggaran':
         return <DataPelanggaran />;
       case 'Data Pembayaran':
