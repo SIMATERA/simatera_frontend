@@ -23,10 +23,10 @@ export default function JadwalKegiatanMahasiswa() {
 
 
   return (
-    <div className="flex">
+    <div className="flex bg-[#F5F6FA]">
         <div className="flex-1 flex flex-col">
             <PageHeading title="Jadwal Kegiatan" />
-            <div className="space-y-4">
+            <div className="flex-1 p-6">
               {jadwalKegiatan.length > 0 ? (
                 jadwalKegiatan.map((item) => (
                   <div

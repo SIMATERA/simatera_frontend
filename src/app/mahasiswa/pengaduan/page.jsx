@@ -111,7 +111,7 @@ const PengaduanPage = () => {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <PageHeading title="Pengaduan Kasra" />
+      <PageHeading title="Pengaduan Mahasiswa" />
       <div className="p-6">
         <div className="flex justify-end mb-4">
           {/* Button to show/hide form */}
@@ -212,25 +212,25 @@ const PengaduanPage = () => {
 
         {/* Data Pengaduan Section */}
         <div className="overflow-x-auto bg-white rounded-lg shadow">
-          <table className="w-full border-collapse border border-gray-300">
-            <thead>
-              <tr className="bg-gray-200">
+          <table className="min-w-full">
+            <thead className="bg-gray-50">
+              <tr className="text-center">
                 {TABLE_HEAD.map((item) => (
-                      <th key={item} className="border p-2">{item}</th>
+                      <th key={item} className="px-4 py-3 text-sm">{item}</th>
                     ))}
               </tr>
             </thead>
             <tbody>
               {pengaduanList.map((item) => (
-                <tr key={item.id} className="text-center">
-                  <td className="border p-2">{item.id.slice(0, 8)}</td>
-                  <td className="border p-2">{item.nim}</td>
-                  <td className="border p-2">{item.nama}</td>
-                  <td className="border p-2">{item.gedung}</td>
-                  <td className="border p-2">{item.kamar}</td>
-                  <td className="border p-2">{item.keterangan}</td>
-                  <td className="border p-2">{item.tanggal}</td>
-                  <td className="border p-2">
+                <tr key={item.id} className="odd:bg-[#FDE9CC] even:bg-white">
+                  <td className="px-4 py-3 text-sm">{item.id.slice(0, 8)}</td>
+                  <td className="px-4 py-3 text-sm">{item.nim}</td>
+                  <td className="px-4 py-3 text-sm">{item.nama}</td>
+                  <td className="px-4 py-3 text-sm">{item.gedung}</td>
+                  <td className="px-4 py-3 text-sm">{item.kamar}</td>
+                  <td className="px-4 py-3 text-sm">{item.keterangan}</td>
+                  <td className="px-4 py-3 text-sm">{item.tanggal}</td>
+                  <td className="px-4 py-3 text-sm">
                     <span
                           className={`px-3 py-1 rounded text-white ${item.status === 'Belum Dikerjakan'
                               ? 'bg-red-500'
@@ -242,7 +242,7 @@ const PengaduanPage = () => {
                           {item.status}
                         </span>
                       </td>
-                      <td className="border p-2">
+                      <td className="px-4 py-3 text-sm">
                         {item.gambar && (
                           <img
                             src={item.gambar}
