@@ -78,7 +78,7 @@ const CreateJadwalKegiatan = () => {
           : item
       );
       setEditId(null);
-      toast.success('jadwalKegiatan berhasil diperbarui!');
+      toast.success('Jadwal Kegiatan berhasil diperbarui!');
     } else {
       const newjadwalKegiatan = {
         id: Date.now(),
@@ -121,17 +121,17 @@ const CreateJadwalKegiatan = () => {
     const updatedJadwalKegiatan = jadwalKegiatan.filter((p) => p.id !== id);
     saveDataJadwalKegiatan(updatedJadwalKegiatan);
     setjadwalKegiatan(updatedJadwalKegiatan);
-    toast.success('jadwalKegiatan berhasil dihapus!');
+    toast.success('JadwalKegiatan berhasil dihapus!');
   };
 
   return (
     <div className="flex bg-[#F5F6FA]">
       <div className="flex-1 flex flex-col">
-        <PageHeading title="jadwalKegiatan" />
+        <PageHeading title="Jadwal Kegiatan" />
 
         <div className="flex-1 p-6">
           <h1 className="text-2xl font-bold mb-6">
-            {editId ? 'Edit jadwalKegiatan' : 'Buat jadwalKegiatan'}
+            {editId ? 'Edit Jadwal Kegiatan' : 'Buat Jadwal Kegiatan'}
           </h1>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
@@ -177,7 +177,7 @@ const CreateJadwalKegiatan = () => {
                 type="submit"
                 className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition"
               >
-                {editId ? 'Update jadwalKegiatan' : 'Buat jadwalKegiatan'}
+                {editId ? 'Update Jadwal Kegiatan' : 'Buat Jadwal Kegiatan'}
               </button>
               {editId && (
                 <button
@@ -197,7 +197,7 @@ const CreateJadwalKegiatan = () => {
           </form>
 
           <div className="mt-6">
-            <h2 className="text-xl font-bold mb-4">Daftar jadwalKegiatan</h2>
+            <h2 className="text-xl font-bold mb-4">Daftar Jadwal Kegiatan</h2>
             <div className="space-y-3">
               {jadwalKegiatan.length > 0 ? (
                 jadwalKegiatan.map((item) => (

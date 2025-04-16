@@ -1,58 +1,46 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/utils/AuthContext';
+import { login } from '@/services/AuthService';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { useAuth } from '@/utils/AuthContext';
-import { getDataKasra, getDataMahasiswa } from '@/utils/localStorage';
 
 const LoginPage = () => {
-  const router = useRouter();
-  const { user, login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
+  const { login: authLogin } = useAuth();
 
-  // 🔹 Ambil data mahasiswa dari localStorage
-  useEffect(() => {
-    const data = getDataMahasiswa();
-  }, []);
-
-  // 🔹 Data default (admin & kakak asrama)
-  const defaultData = [
-    { email: 'admin@itera.ac.id', password: 'admin123', role: 'admin' },
-    ...getDataKasra(),
-    ...getDataMahasiswa(),
-  ];
-
-  // 🔹 Gabungkan data dari localStorage dengan data default
-  const allUsers = [...defaultData, ...getDataMahasiswa()];
-
-  // 🔹 Cek apakah user sudah login
-  useEffect(() => {
-    if (user) {
-      router.push(`/${user.role}`);
-    }
-  }, [user, router]);
-
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    const toastId = 'login-toast';
+    setIsLoading(true);
 
-    // 🔹 Cek apakah email & password cocok dengan yang tersimpan
-    const foundUser = allUsers.find(
-      (user) => user.email === email && user.password === password
-    );
-
-    if (foundUser) {
-      login(foundUser);
-      toast.success(`Login berhasil sebagai ${foundUser.role}`, { toastId });
-
-      setTimeout(() => {
-        router.push(`/${foundUser.role}`);
-      }, 1500);
-    } else {
-      toast.error('Email atau password salah', { toastId });
+    try {
+      // Gunakan service login dengan email
+      const userData = await login(email, password);
+      
+      // Update context auth
+      authLogin(userData);
+      
+      // Tampilkan toast sukses
+      toast.success('Login berhasil!');
+      
+      // Redirect berdasarkan role
+      if (userData.role === 'admin') {
+        router.push('/admin');
+      } else if (userData.role === 'kasra') {
+        router.push('/kasra');
+      } else if (userData.role === 'mahasiswa') {
+        router.push('/mahasiswa');
+      }
+    } catch (error) {
+      // Tampilkan toast error
+      toast.error(error.message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -80,8 +68,8 @@ const LoginPage = () => {
         <form onSubmit={handleLogin}>
           <div className="mb-4">
             <input
-              type="text"
-              placeholder="email"
+              type="email"
+              placeholder="Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-md text-gray-900"
@@ -91,7 +79,7 @@ const LoginPage = () => {
           <div className="mb-4">
             <input
               type="password"
-              placeholder="password"
+              placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-md text-gray-900"
@@ -100,9 +88,10 @@ const LoginPage = () => {
           </div>
           <button
             type="submit"
-            className="w-full py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600"
+            disabled={isLoading}
+            className="w-full py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600 disabled:bg-orange-300"
           >
-            Login
+            {isLoading ? 'Loading...' : 'Login'}
           </button>
         </form>
       </div>

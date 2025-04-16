@@ -5,6 +5,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { saveDataPengaduanMahasiswa, getDataPengaduanMahasiswa, getDataKasra } from '@/utils/localStorage';
 import { useAuth } from '@/utils/AuthContext';
 import PageHeading from '@/components/PageHeading';
+import Search from '@/components/Search';
+import Pagination from '@/components/Pagination';
 
 const TABLE_HEAD = [
   'ID',
@@ -29,8 +31,11 @@ const KasraPengaduanPage = () => {
   const [pengaduanList, setPengaduanList] = useState([]);
   const [selectedImage, setSelectedImage] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [showForm, setShowForm] = useState(false);  // Track the visibility of the form
+  const [showForm, setShowForm] = useState(false);
   const [dataKasra, setDataMahasiswa] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   useEffect(() => {
     if (user?.nim) {
@@ -109,12 +114,45 @@ const KasraPengaduanPage = () => {
     setShowForm(false);  // Hide the form after submission
   };
 
+  const getFilteredData = () => {
+    let filteredData = pengaduanList || [];
+    
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filteredData = filteredData.filter((item) => 
+        (item?.nim?.toLowerCase() || '').includes(query) ||
+        (item?.nama?.toLowerCase() || '').includes(query) ||
+        (item?.gedung?.toLowerCase() || '').includes(query) ||
+        (item?.kamar?.toLowerCase() || '').includes(query) ||
+        (item?.keterangan?.toLowerCase() || '').includes(query) ||
+        (item?.status?.toLowerCase() || '').includes(query)
+      );
+    }
+    
+    return filteredData;
+  };
+
+  const totalPages = Math.ceil(getFilteredData().length / itemsPerPage);
+
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = getFilteredData().slice(indexOfFirstItem, indexOfLastItem);
+
   return (
     <div className="flex flex-col min-h-screen">
       <PageHeading title="Pengaduan Kasra" />
       <div className="p-6">
-        <div className="flex justify-end mb-4">
-          {/* Button to show/hide form */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+          <div className="w-full md:w-64">
+            <Search
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1);
+              }}
+              placeholder="Cari pengaduan..."
+            />
+          </div>
           <button
             onClick={() => setShowForm(!showForm)}
             className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600"
@@ -123,7 +161,6 @@ const KasraPengaduanPage = () => {
           </button>
         </div>
 
-        {/* Form Section (Overlay) */}
         {showForm && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
             <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-lg">
@@ -210,27 +247,26 @@ const KasraPengaduanPage = () => {
           </div>
         )}
 
-        {/* Data Pengaduan Section */}
         <div className="overflow-x-auto bg-white rounded-lg shadow">
-          <table className="w-full border-collapse border border-gray-300">
-            <thead>
-              <tr className="bg-gray-200">
+          <table className="min-w-full">
+            <thead className="bg-gray-50">
+              <tr className="text-center">
                 {TABLE_HEAD.map((item) => (
-                  <th key={item} className="border p-2">{item}</th>
+                  <th key={item} className="px-4 py-3 text-sm">{item}</th>
                 ))}
               </tr>
             </thead>
-            <tbody>
-              {pengaduanList.map((item) => (
-                <tr key={item.id} className="text-center">
-                  <td className="border p-2">{item.id.slice(0, 8)}</td>
-                  <td className="border p-2">{item.nim}</td>
-                  <td className="border p-2">{item.nama}</td>
-                  <td className="border p-2">{item.gedung}</td>
-                  <td className="border p-2">{item.kamar}</td>
-                  <td className="border p-2">{item.keterangan}</td>
-                  <td className="border p-2">{item.tanggal}</td>
-                  <td className="border p-2">
+            <tbody className="divide-y divide-gray-200">
+              {currentItems.map((item) => (
+                <tr key={item.id} className="odd:bg-[#FDE9CC] even:bg-white">
+                  <td className="px-4 py-3 text-sm">{item.id.slice(0, 8)}</td>
+                  <td className="px-4 py-3 text-sm">{item.nim}</td>
+                  <td className="px-4 py-3 text-sm">{item.nama}</td>
+                  <td className="px-4 py-3 text-sm">{item.gedung}</td>
+                  <td className="px-4 py-3 text-sm">{item.kamar}</td>
+                  <td className="px-4 py-3 text-sm">{item.keterangan}</td>
+                  <td className="px-4 py-3 text-sm">{item.tanggal}</td>
+                  <td className="px-4 py-3 text-sm">
                     <span
                       className={`px-3 py-1 rounded text-white ${
                         item.status === 'Belum Dikerjakan'
@@ -243,7 +279,7 @@ const KasraPengaduanPage = () => {
                       {item.status}
                     </span>
                   </td>
-                  <td className="border p-2">
+                  <td className="px-4 py-3 text-sm">
                     {item.gambar && (
                       <img
                         src={item.gambar}
@@ -259,7 +295,14 @@ const KasraPengaduanPage = () => {
           </table>
         </div>
 
-        {/* Image Modal */}
+        <div className="mt-4 flex justify-center">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+          />
+        </div>
+
         {isModalOpen && (
           <div
             className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50"
